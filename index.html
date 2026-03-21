@@ -11,7 +11,8 @@
             --header-height: 130px; 
         }
         
-        html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%; }
+
+        html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%;    overflow-x: hidden;   position: relative;}}
         body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; max-width: 1000px; margin: 0 auto; color: #222; }
         
         .header-anchor { position: fixed; top: 0; left: 0; right: 0; background: var(--bg); padding: 10px 15px; z-index: 9999; border-bottom: 1px solid rgba(0,0,0,0.1); }
@@ -265,7 +266,7 @@
         });
 
 
-    container.querySelectorAll('.toc', '.reference', ".IPA").forEach(el => {
+        container.querySelectorAll('.toc', '.reference', ".IPA").forEach(el => {
                 el.classList.remove('readable');
             });
     
