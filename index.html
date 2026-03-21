@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wiki Voice Reader Pro</title>
+    <title>Wikireadia</title>
     <style>
         :root { 
             --primary: #0056b3; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; 
             --highlight: #fff9c4; 
-            --header-height: 140px; 
+            --header-height: 130px; 
         }
         
         html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%; }
@@ -28,7 +28,7 @@
         .media-btns { display: flex; width: 100%; gap: 2px; border-radius: 8px; overflow: hidden; }
         .icon-btn { 
             flex: 1; 
-            height: 48px; 
+            height: 28px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
@@ -45,7 +45,7 @@
         #suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; display: none; z-index: 10001; border-radius: 0 0 8px 8px; }
         .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
 
-        #content { background: white; padding: 25px; margin: calc(var(--header-height) + 20px) 15px 100px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
+        #content { background: white; padding: 5px; margin: calc(var(--header-height) + 20px) 15px 100px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
 
         .readable { scroll-margin-top: calc(var(--header-height) + 30px); border-radius: 4px; padding: 2px 4px; display: block; }
         .reading-highlight { background-color: var(--highlight) !important; box-shadow: 0 0 0 2px var(--highlight); }
@@ -81,7 +81,7 @@
 
 <article id="content">
     <h1 class="readable">Ready to Read</h1>
-    <p class="readable">Search a topic above or click a link in an article. Use the rectangular controls to navigate sections.</p>
+    <p class="readable">Search a topic above or click a link in an article. Use the controls to navigate sections.</p>
 </article>
 
 <script>
@@ -94,10 +94,11 @@
         const voiceSelect = document.getElementById('voice-select');
         const englishVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
         voiceSelect.innerHTML = '';
+        console.log(englishVoices)
         englishVoices.forEach((voice, i) => {
             const opt = document.createElement('option');
             opt.value = i;
-            opt.textContent = voice.name.split(' ')[0];
+            opt.textContent = voice.name;
             if (voice.name.includes("Daniel") || voice.name.includes("Samantha")) opt.selected = true;
             voiceSelect.appendChild(opt);
         });
@@ -148,6 +149,7 @@
 
     function speakCurrent() {
         if (!isReading || currentElementIndex >= readableElements.length) { stopSpeech(); return; }
+        navigator.wakeLock.request('screen');
 
         const el = readableElements[currentElementIndex];
         document.querySelectorAll('.reading-highlight').forEach(e => e.classList.remove('reading-highlight'));
@@ -231,7 +233,7 @@
     }
 
     function cleanWikiHtml(container) {
-        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist, .hatnote').forEach(el => el.remove());
+        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .sidebar, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist, .hatnote').forEach(el => el.remove());
 
         // Process Images
         container.querySelectorAll('.thumb, figure').forEach(thumb => {
@@ -258,9 +260,16 @@
         });
 
         // Tag headers, paragraphs, and ENTIRE lists for reading
-        container.querySelectorAll('h2, h3, p, ul, ol').forEach(el => {
+        container.querySelectorAll('h2, h3, p, ol').forEach(el => {
             if (el.innerText.trim().length > 2) el.classList.add('readable');
         });
+
+
+    container.querySelectorAll('.toc', '.reference', ".IPA").forEach(el => {
+                el.classList.remove('readable');
+            });
+    
+
     }
 
     document.getElementById('search-input').addEventListener('input', (e) => {
