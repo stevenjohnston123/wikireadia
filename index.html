@@ -8,7 +8,7 @@
         :root { 
             --primary: #0056b3; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; 
             --highlight: #fff9c4; 
-            --header-height: 115px; 
+            --header-height: 140px; 
         }
         
         html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%; }
@@ -16,18 +16,30 @@
         
         .header-anchor { position: fixed; top: 0; left: 0; right: 0; background: var(--bg); padding: 10px 15px; z-index: 9999; border-bottom: 1px solid rgba(0,0,0,0.1); }
         .controls-wrapper { max-width: 800px; margin: 0 auto; }
-        .controls { background: white; padding: 10px; border-radius: 12px; border: 1px solid #ddd; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .controls { background: white; padding: 10px; border-radius: 12px; border: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
         .row { display: flex; gap: 8px; align-items: center; }
         .search-container { flex-grow: 1; position: relative; }
         input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
         
-        #voice-select { width: auto; max-width: 100px; padding: 5px; border: 1px solid #eee; font-size: 0.8rem; border-radius: 4px; background: #fafafa; }
+        #voice-select { width: auto; max-width: 100px; padding: 8px; border: 1px solid #eee; font-size: 0.8rem; border-radius: 8px; background: #fafafa; }
         
-        .media-btns { display: flex; gap: 15px; justify-content: center; padding-top: 5px; }
-        .icon-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer; font-size: 1.3rem; transition: transform 0.1s; }
-        .icon-btn:active { transform: scale(0.9); }
-        .icon-btn.play-toggle { background: var(--success); color: white; width: 50px; height: 50px; }
+        /* Updated Rectangular Buttons */
+        .media-btns { display: flex; width: 100%; gap: 2px; border-radius: 8px; overflow: hidden; }
+        .icon-btn { 
+            flex: 1; 
+            height: 48px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border: none; 
+            background: #e0e0e0; 
+            cursor: pointer; 
+            font-size: 1.2rem; 
+            transition: background 0.2s;
+        }
+        .icon-btn:active { background: #d0d0d0; }
+        .icon-btn.play-toggle { background: var(--success); color: white; }
         .icon-btn.play-toggle.playing { background: var(--danger); }
 
         #suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; display: none; z-index: 10001; border-radius: 0 0 8px 8px; }
@@ -35,16 +47,15 @@
 
         #content { background: white; padding: 25px; margin: calc(var(--header-height) + 20px) 15px 100px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
 
-        .readable { scroll-margin-top: calc(var(--header-height) + 30px); border-radius: 4px; padding: 2px 4px; }
+        .readable { scroll-margin-top: calc(var(--header-height) + 30px); border-radius: 4px; padding: 2px 4px; display: block; }
         .reading-highlight { background-color: var(--highlight) !important; box-shadow: 0 0 0 2px var(--highlight); }
         
         h1.readable { font-size: 1.8rem; border-bottom: 2px solid #eee; margin-top: 0; }
         h2.readable { font-size: 1.4rem; border-bottom: 1px solid #eee; color: var(--primary); margin-top: 1.5em; }
         
-        .reader-caption { font-size: 0.9rem; font-style: italic; color: #555; background: #f9f9f9; padding: 10px; border-left: 4px solid var(--primary); margin: 10px 0; display: block; }
+        .reader-caption { font-size: 0.9rem; font-style: italic; color: #555; background: #f9f9f9; padding: 10px; border-left: 4px solid var(--primary); margin: 10px 0; }
         .wiki-img-wrapper { max-width: 100%; margin: 20px 0; text-align: center; }
         img { max-width: 100%; border-radius: 8px; }
-        summary { font-weight: bold; cursor: pointer; padding: 10px; background: #eee; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -60,9 +71,9 @@
                 <select id="voice-select"></select>
             </div>
             <div class="media-btns">
-                <button class="icon-btn" onclick="navSegment(-1)">⏮</button>
-                <button id="play-btn" class="icon-btn play-toggle" onclick="toggleSpeech()">▶</button>
-                <button class="icon-btn" onclick="navSegment(1)">⏭</button>
+                <button class="icon-btn" onclick="navSegment(-1)" title="Back">⏮</button>
+                <button id="play-btn" class="icon-btn play-toggle" onclick="toggleSpeech()" title="Play/Pause">▶</button>
+                <button class="icon-btn" onclick="navSegment(1)" title="Next">⏭</button>
             </div>
         </div>
     </div>
@@ -70,7 +81,7 @@
 
 <article id="content">
     <h1 class="readable">Ready to Read</h1>
-    <p class="readable">Search a topic above. Next and Back will now trigger instant reading of the section.</p>
+    <p class="readable">Search a topic above or click a link in an article. Use the rectangular controls to navigate sections.</p>
 </article>
 
 <script>
@@ -106,8 +117,7 @@
         refreshReadableList();
         if (readableElements.length === 0) return;
         
-        // Find first visible or continue from current highlight
-        const visibleIdx = readableElements.findIndex(el => el.getBoundingClientRect().top >= 130);
+        const visibleIdx = readableElements.findIndex(el => el.getBoundingClientRect().top >= 150);
         currentElementIndex = visibleIdx === -1 ? 0 : visibleIdx;
 
         isReading = true;
@@ -117,11 +127,11 @@
 
     function refreshReadableList() {
         readableElements = Array.from(document.querySelectorAll('.readable'))
-            .filter(el => el.innerText.trim().length > 2); // Filter out empty artifacts
+            .filter(el => el.innerText.trim().length > 2);
     }
 
     function navSegment(direction) {
-        stopSpeech(); // Kill current audio
+        stopSpeech();
         refreshReadableList();
 
         currentElementIndex += direction;
@@ -140,16 +150,11 @@
         if (!isReading || currentElementIndex >= readableElements.length) { stopSpeech(); return; }
 
         const el = readableElements[currentElementIndex];
-        
-        // Clear old highlights
         document.querySelectorAll('.reading-highlight').forEach(e => e.classList.remove('reading-highlight'));
         el.classList.add('reading-highlight');
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-        const isHeader = ['H1', 'H2', 'H3'].includes(el.tagName);
-        const text = isHeader ? `${el.innerText}` : el.innerText;
-        
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance = new SpeechSynthesisUtterance(el.innerText);
         const englishVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
         const selectedIndex = document.getElementById('voice-select').value;
         if (englishVoices[selectedIndex]) utterance.voice = englishVoices[selectedIndex];
@@ -157,11 +162,10 @@
         utterance.onend = () => {
             if (isReading) {
                 currentElementIndex++;
-                setTimeout(speakCurrent, 200);
+                setTimeout(speakCurrent, 300);
             }
         };
 
-        // Important: Short timeout ensures the previous 'cancel' command has fully cleared the buffer
         setTimeout(() => {
             if (isReading) window.speechSynthesis.speak(utterance);
         }, 50);
@@ -203,6 +207,23 @@
 
             contentDiv.innerHTML = `<h1 class="readable">${data.parse.displaytitle}</h1>`;
             contentDiv.appendChild(container);
+            
+            // Re-bind links to stay in-app
+            contentDiv.querySelectorAll('a').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href && href.startsWith('/wiki/') && !href.includes(':')) {
+                    link.onclick = (e) => {
+                        e.preventDefault();
+                        const newTitle = href.replace('/wiki/', '');
+                        window.location.hash = `!${newTitle}`;
+                    };
+                } else if (href && href.startsWith('#')) {
+                    link.onclick = (e) => e.preventDefault(); // Disable internal jumps to keep reader focus
+                } else {
+                    link.setAttribute('target', '_blank');
+                }
+            });
+
             window.scrollTo(0, 0);
             refreshReadableList();
             currentElementIndex = 0;
@@ -210,8 +231,7 @@
     }
 
     function cleanWikiHtml(container) {
-        // Remove technical junk
-        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist').forEach(el => el.remove());
+        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist, .hatnote').forEach(el => el.remove());
 
         // Process Images
         container.querySelectorAll('.thumb, figure').forEach(thumb => {
@@ -237,8 +257,8 @@
             thumb.parentNode.replaceChild(wrapper, thumb);
         });
 
-        // Tag headers and text for reading
-        container.querySelectorAll('h2, h3, p, li').forEach(el => {
+        // Tag headers, paragraphs, and ENTIRE lists for reading
+        container.querySelectorAll('h2, h3, p, ul, ol').forEach(el => {
             if (el.innerText.trim().length > 2) el.classList.add('readable');
         });
     }
