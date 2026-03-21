@@ -2,98 +2,75 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wiki Voice Reader Pro</title>
     <style>
         :root { 
             --primary: #0056b3; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; 
             --highlight: #fff9c4; 
+            --header-height: 115px; 
         }
         
-        body { 
-            font-family: system-ui, -apple-system, sans-serif; 
-            line-height: 1.5; max-width: 1100px; margin: 0 auto; 
-            padding: 0 20px 100px 20px; background: var(--bg); color: #222; font-size: 0.95rem; 
-        }
+        html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%; }
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; max-width: 1000px; margin: 0 auto; color: #222; }
         
-        .header-anchor { position: sticky; top: 0; background: var(--bg); padding: 15px 0 10px 0; z-index: 1000; }
+        .header-anchor { position: fixed; top: 0; left: 0; right: 0; background: var(--bg); padding: 10px 15px; z-index: 9999; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .controls-wrapper { max-width: 800px; margin: 0 auto; }
+        .controls { background: white; padding: 10px; border-radius: 12px; border: 1px solid #ddd; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        .controls { 
-            background: white; padding: 10px; border-radius: 8px; border: 1px solid #ddd;
-            display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        
-        .row { display: flex; gap: 8px; width: 100%; }
+        .row { display: flex; gap: 8px; align-items: center; }
         .search-container { flex-grow: 1; position: relative; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
         
-        input, select { 
-            width: 100%; padding: 8px 12px; border: 1px solid #ccc; 
-            border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; 
-        }
+        #voice-select { width: auto; max-width: 100px; padding: 5px; border: 1px solid #eee; font-size: 0.8rem; border-radius: 4px; background: #fafafa; }
         
-        #suggestions {
-            position: absolute; top: 100%; left: 0; right: 0; 
-            background: white; border: 1px solid #ccc; max-height: 250px; 
-            overflow-y: auto; display: none; z-index: 1001;
-        }
-        .suggestion-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+        .media-btns { display: flex; gap: 15px; justify-content: center; padding-top: 5px; }
+        .icon-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer; font-size: 1.3rem; transition: transform 0.1s; }
+        .icon-btn:active { transform: scale(0.9); }
+        .icon-btn.play-toggle { background: var(--success); color: white; width: 50px; height: 50px; }
+        .icon-btn.play-toggle.playing { background: var(--danger); }
 
-        button { padding: 8px 16px; cursor: pointer; border-radius: 4px; border: none; background: var(--primary); color: white; font-weight: bold; font-size: 0.9rem; }
-        #read-btn { background: var(--success); min-width: 140px; }
-        #read-btn.playing { background: var(--danger); }
+        #suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; display: none; z-index: 10001; border-radius: 0 0 8px 8px; }
+        .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
+
+        #content { background: white; padding: 25px; margin: calc(var(--header-height) + 20px) 15px 100px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
+
+        .readable { scroll-margin-top: calc(var(--header-height) + 30px); border-radius: 4px; padding: 2px 4px; }
+        .reading-highlight { background-color: var(--highlight) !important; box-shadow: 0 0 0 2px var(--highlight); }
         
-        #content { background: white; padding: 25px 40px; margin-top: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-
-        /* Headers now have distinct styling for the reader */
-        h1.readable { font-size: 1.6rem; margin: 0 0 15px 0; border-bottom: 2px solid #eee; padding-bottom: 5px; color: #000; }
-        h2.readable { font-size: 1.3rem; margin: 25px 0 10px 0; border-bottom: 1px solid #eee; color: var(--primary); }
-        h3.readable { font-size: 1.1rem; margin: 20px 0 8px 0; font-weight: bold; }
-        p { margin: 0 0 12px 0; }
-
-        .reader-caption {
-            font-size: 0.85rem; font-style: italic; color: #555; background: #f9f9f9;
-            padding: 6px 10px; border-left: 4px solid var(--primary); margin-bottom: 8px; display: block;
-        }
-
-        .reading-highlight { 
-            background-color: var(--highlight); 
-            box-shadow: 0 0 0 4px var(--highlight);
-            border-radius: 2px;
-        }
-
-        .wiki-img-wrapper { max-width: 320px; float: right; margin: 0 0 15px 15px; }
-        img { width: 100%; height: auto; border-radius: 4px; border: 1px solid #eee; }
+        h1.readable { font-size: 1.8rem; border-bottom: 2px solid #eee; margin-top: 0; }
+        h2.readable { font-size: 1.4rem; border-bottom: 1px solid #eee; color: var(--primary); margin-top: 1.5em; }
         
-        .wiki-collapse { margin: 12px 0; border: 1px solid #ddd; border-radius: 4px; clear: both; }
-        summary { padding: 10px; background: #f8f9fa; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
-        
-        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; display: block; overflow-x: auto; }
-        th, td { border: 1px solid #ddd; padding: 6px; }
-
-        @media (max-width: 600px) { .wiki-img-wrapper { float: none; margin: 10px auto; width: 100%; } }
+        .reader-caption { font-size: 0.9rem; font-style: italic; color: #555; background: #f9f9f9; padding: 10px; border-left: 4px solid var(--primary); margin: 10px 0; display: block; }
+        .wiki-img-wrapper { max-width: 100%; margin: 20px 0; text-align: center; }
+        img { max-width: 100%; border-radius: 8px; }
+        summary { font-weight: bold; cursor: pointer; padding: 10px; background: #eee; border-radius: 6px; }
     </style>
 </head>
 <body>
 
-<div class="header-anchor" id="sticky-header" aria-hidden="true">
-    <div class="controls">
-        <div class="row">
-            <div class="search-container">
-                <input type="text" id="search-input" placeholder="Search..." autocomplete="off">
-                <div id="suggestions"></div>
+<div class="header-anchor">
+    <div class="controls-wrapper">
+        <div class="controls">
+            <div class="row">
+                <div class="search-container">
+                    <input type="text" id="search-input" placeholder="Search Wikipedia..." autocomplete="off" onkeydown="if(event.key==='Enter') performSearch()">
+                    <div id="suggestions"></div>
+                </div>
+                <select id="voice-select"></select>
             </div>
-            <button onclick="performSearch()">Search</button>
-        </div>
-        <div class="row">
-            <select id="voice-select"></select>
-            <button id="read-btn" onclick="toggleSpeech()">🔊 Start Reading</button>
+            <div class="media-btns">
+                <button class="icon-btn" onclick="navSegment(-1)">⏮</button>
+                <button id="play-btn" class="icon-btn play-toggle" onclick="toggleSpeech()">▶</button>
+                <button class="icon-btn" onclick="navSegment(1)">⏭</button>
+            </div>
         </div>
     </div>
 </div>
 
 <article id="content">
-    <h1 class="readable">Wikipedia Reader</h1>
-    <p class="readable">Search for a topic to start.</p>
+    <h1 class="readable">Ready to Read</h1>
+    <p class="readable">Search a topic above. Next and Back will now trigger instant reading of the section.</p>
 </article>
 
 <script>
@@ -104,25 +81,104 @@
 
     function populateVoices() {
         const voiceSelect = document.getElementById('voice-select');
-        const allVoices = window.speechSynthesis.getVoices();
-        const englishVoices = allVoices.filter(v => v.lang.startsWith('en'));
-        
+        const englishVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
         voiceSelect.innerHTML = '';
         englishVoices.forEach((voice, i) => {
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = voice.name;
-            if (voice.name.includes("Daniel") && voice.lang.includes("GB")) option.selected = true;
-            voiceSelect.appendChild(option);
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = voice.name.split(' ')[0];
+            if (voice.name.includes("Daniel") || voice.name.includes("Samantha")) opt.selected = true;
+            voiceSelect.appendChild(opt);
         });
     }
-
     window.speechSynthesis.onvoiceschanged = populateVoices;
     populateVoices();
 
+    function toggleSpeech() { isReading ? stopSpeech() : startSpeech(); }
+
+    function stopSpeech() {
+        isReading = false;
+        window.speechSynthesis.cancel();
+        updateBtn(false);
+    }
+
+    function startSpeech() {
+        refreshReadableList();
+        if (readableElements.length === 0) return;
+        
+        // Find first visible or continue from current highlight
+        const visibleIdx = readableElements.findIndex(el => el.getBoundingClientRect().top >= 130);
+        currentElementIndex = visibleIdx === -1 ? 0 : visibleIdx;
+
+        isReading = true;
+        updateBtn(true);
+        speakCurrent();
+    }
+
+    function refreshReadableList() {
+        readableElements = Array.from(document.querySelectorAll('.readable'))
+            .filter(el => el.innerText.trim().length > 2); // Filter out empty artifacts
+    }
+
+    function navSegment(direction) {
+        stopSpeech(); // Kill current audio
+        refreshReadableList();
+
+        currentElementIndex += direction;
+        if (currentElementIndex < 0) currentElementIndex = 0;
+        if (currentElementIndex >= readableElements.length) {
+            currentElementIndex = readableElements.length - 1;
+            return;
+        }
+
+        isReading = true;
+        updateBtn(true);
+        speakCurrent();
+    }
+
+    function speakCurrent() {
+        if (!isReading || currentElementIndex >= readableElements.length) { stopSpeech(); return; }
+
+        const el = readableElements[currentElementIndex];
+        
+        // Clear old highlights
+        document.querySelectorAll('.reading-highlight').forEach(e => e.classList.remove('reading-highlight'));
+        el.classList.add('reading-highlight');
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        const isHeader = ['H1', 'H2', 'H3'].includes(el.tagName);
+        const text = isHeader ? `${el.innerText}` : el.innerText;
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        const englishVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+        const selectedIndex = document.getElementById('voice-select').value;
+        if (englishVoices[selectedIndex]) utterance.voice = englishVoices[selectedIndex];
+
+        utterance.onend = () => {
+            if (isReading) {
+                currentElementIndex++;
+                setTimeout(speakCurrent, 200);
+            }
+        };
+
+        // Important: Short timeout ensures the previous 'cancel' command has fully cleared the buffer
+        setTimeout(() => {
+            if (isReading) window.speechSynthesis.speak(utterance);
+        }, 50);
+    }
+
+    function updateBtn(playing) {
+        const btn = document.getElementById('play-btn');
+        btn.innerHTML = playing ? "■" : "▶";
+        btn.classList.toggle("playing", playing);
+    }
+
     function performSearch() {
         const query = document.getElementById('search-input').value.trim();
-        if (query) window.location.hash = `!${encodeURIComponent(query)}`;
+        if (query) {
+            document.getElementById('suggestions').style.display = 'none';
+            window.location.hash = `!${encodeURIComponent(query)}`;
+        }
     }
 
     window.addEventListener('hashchange', () => {
@@ -132,162 +188,65 @@
 
     async function fetchWikiData(title) {
         const contentDiv = document.getElementById('content');
-        contentDiv.innerHTML = "<h2>Fetching...</h2>";
+        contentDiv.innerHTML = "<h2>Loading Article...</h2>";
         stopSpeech();
 
         try {
             const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle`;
             const response = await fetch(url);
             const data = await response.json();
-            
             const parser = new DOMParser();
             const doc = parser.parseFromString(data.parse.text['*'], 'text/html');
             const container = doc.body;
 
-            processContent(container);
+            cleanWikiHtml(container);
 
             contentDiv.innerHTML = `<h1 class="readable">${data.parse.displaytitle}</h1>`;
             contentDiv.appendChild(container);
             window.scrollTo(0, 0);
+            refreshReadableList();
+            currentElementIndex = 0;
         } catch (err) { contentDiv.innerHTML = "<h2>Article not found.</h2>"; }
     }
 
-    function processContent(container) {
-        // Scrub Junk
-        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .mw-empty-elt, .metadata, .ambox, style, script, .mw-parser-output .legend').forEach(el => el.remove());
+    function cleanWikiHtml(container) {
+        // Remove technical junk
+        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist').forEach(el => el.remove());
 
-        // Images & Captions
+        // Process Images
         container.querySelectorAll('.thumb, figure').forEach(thumb => {
             const img = thumb.querySelector('img');
-            const captionEl = thumb.querySelector('.thumbcaption, figcaption');
+            const cap = thumb.querySelector('.thumbcaption, figcaption');
             const wrapper = document.createElement('div');
             wrapper.className = 'wiki-img-wrapper';
-
-            if (captionEl) {
-                const cleanCapNode = captionEl.cloneNode(true);
-                cleanCapNode.querySelectorAll('style, .mw-parser-output, .legend').forEach(s => s.remove());
-                const cleanText = cleanCapNode.innerText.replace(/\[\d+\]/g, "").trim();
+            if (cap) {
+                const cleanText = cap.innerText.replace(/\[\d+\]/g, "").trim();
                 if (cleanText.length > 2) {
-                    const capSpan = document.createElement('span');
-                    capSpan.className = 'reader-caption readable';
-                    capSpan.innerText = "Image caption: " + cleanText;
-                    wrapper.appendChild(capSpan);
+                    const span = document.createElement('span');
+                    span.className = 'reader-caption readable';
+                    span.innerText = "Image: " + cleanText;
+                    wrapper.appendChild(span);
                 }
             }
-
             if (img) {
-                const newImg = document.createElement('img');
+                const ni = document.createElement('img');
                 const src = img.getAttribute('src');
-                newImg.src = src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://en.wikipedia.org' + src : src);
-                wrapper.appendChild(newImg);
+                ni.src = src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://en.wikipedia.org' + src : src);
+                wrapper.appendChild(ni);
             }
             thumb.parentNode.replaceChild(wrapper, thumb);
         });
 
-        // Tables
-        container.querySelectorAll('table').forEach((table, i) => {
-            const rawCap = table.querySelector('caption')?.innerText || table.querySelector('th')?.innerText || "";
-            const cleanCap = rawCap.replace(/\[\d+\]/g, "").trim() || "unnamed data table";
-            const capSpan = document.createElement('span');
-            capSpan.className = 'reader-caption readable';
-            capSpan.innerText = "Table section: " + cleanCap;
-            const d = document.createElement('details');
-            d.className = 'wiki-collapse';
-            d.innerHTML = `<summary>Table: ${cleanCap}</summary>`;
-            d.appendChild(table.cloneNode(true));
-            table.parentNode.insertBefore(capSpan, table);
-            table.parentNode.replaceChild(d, table);
+        // Tag headers and text for reading
+        container.querySelectorAll('h2, h3, p, li').forEach(el => {
+            if (el.innerText.trim().length > 2) el.classList.add('readable');
         });
-
-        // TOC
-        container.querySelectorAll('.toc, #toc').forEach(toc => {
-            const d = document.createElement('details');
-            d.className = 'wiki-collapse';
-            d.innerHTML = `<summary>Contents (Collapsed)</summary>`;
-            d.appendChild(toc.cloneNode(true));
-            toc.parentNode.replaceChild(d, toc);
-        });
-
-        // EXPLICIT HEADER TAGGING: Ensure headers are read
-        container.querySelectorAll('h1, h2, h3, p, li, summary').forEach(el => {
-            if (el.innerText.trim().length > 1) el.classList.add('readable');
-        });
-    }
-
-    function toggleSpeech() { isReading ? stopSpeech() : startSpeech(); }
-
-    function stopSpeech() {
-        isReading = false; window.speechSynthesis.cancel();
-        document.querySelectorAll('.reading-highlight').forEach(el => el.classList.remove('reading-highlight'));
-        updateBtn(false);
-    }
-
-    function startSpeech() {
-        // Collect all readable parts including headers
-        readableElements = Array.from(document.querySelectorAll('.readable'));
-        
-        const headerHeight = document.getElementById('sticky-header').offsetHeight;
-        
-        // Find current segment based on scroll
-        currentElementIndex = readableElements.findIndex(el => {
-            const rect = el.getBoundingClientRect();
-            // Start reading from the first item whose bottom is below our sticky header
-            return rect.bottom > (headerHeight + 20);
-        });
-        
-        if (currentElementIndex === -1) currentElementIndex = 0;
-        isReading = true; updateBtn(true); readNextChunk();
-    }
-
-    function readNextChunk() {
-        if (!isReading || currentElementIndex >= readableElements.length) { stopSpeech(); return; }
-
-        const el = readableElements[currentElementIndex];
-        const headerHeight = document.getElementById('sticky-header').offsetHeight;
-
-        document.querySelectorAll('.reading-highlight').forEach(e => e.classList.remove('reading-highlight'));
-        el.classList.add('reading-highlight');
-        
-        // Ensure the header or text is scrolled to be fully visible below the search bar
-        const yOffset = -headerHeight - 20;
-        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-
-        // Add a small pause for headers to make it feel more natural
-        const isHeader = ['H1', 'H2', 'H3'].includes(el.tagName);
-        const textToRead = isHeader ? `Section header: ${el.innerText}` : el.innerText;
-
-        const utterance = new SpeechSynthesisUtterance(textToRead);
-        
-        const allVoices = window.speechSynthesis.getVoices();
-        const englishVoices = allVoices.filter(v => v.lang.startsWith('en'));
-        const selectedIndex = document.getElementById('voice-select').value;
-        if (englishVoices[selectedIndex]) utterance.voice = englishVoices[selectedIndex];
-
-        // Slightly slower for headers for clarity
-        utterance.rate = isHeader ? 0.9 : 1.0;
-
-        utterance.onend = () => { 
-            // Small delay between segments
-            setTimeout(() => {
-                currentElementIndex++; 
-                readNextChunk(); 
-            }, isHeader ? 400 : 100);
-        };
-        utterance.onerror = () => stopSpeech();
-        window.speechSynthesis.speak(utterance);
-    }
-
-    function updateBtn(playing) {
-        const btn = document.getElementById('read-btn');
-        btn.innerText = playing ? "🛑 Stop Reading" : "🔊 Start Reading";
-        btn.classList.toggle("playing", playing);
     }
 
     document.getElementById('search-input').addEventListener('input', (e) => {
         clearTimeout(debounceTimer);
         const q = e.target.value;
-        if (q.length < 2) return;
+        if (q.length < 2) { document.getElementById('suggestions').style.display = 'none'; return; }
         debounceTimer = setTimeout(async () => {
             const res = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&format=json&origin=*&search=${encodeURIComponent(q)}`);
             const data = await res.json();
@@ -298,7 +257,7 @@
                 d.onclick = () => { document.getElementById('search-input').value = item; box.style.display = 'none'; performSearch(); };
                 box.appendChild(d);
             });
-            box.style.display = 'block';
+            box.style.display = data[1].length ? 'block' : 'none';
         }, 300);
     });
 
