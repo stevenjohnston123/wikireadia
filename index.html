@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wikipedia Voice Reader</title>
+    <style>
+        :root { --primary: #0056b3; --success: #28a745; --bg: #f4f7f6; --header-h: 85px; }
+        body { font-family: system-ui, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 0 20px 40px 20px; background: var(--bg); color: #333; }
+        
+        /* Sticky Header */
+        .header-anchor {
+            position: sticky; top: 0; background: var(--bg); padding: 20px 0 10px 0; z-index: 1000;
+        }
+        .controls { 
+            background: white; padding: 12px; border-radius: 8px;
+            border: 1px solid #ddd; display: flex; gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative;
+        }
+        
+        .search-container { flex-grow: 1; position: relative; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+        
+        #suggestions {
+            position: absolute; top: 100%; left: 0; right: 0; 
+            background: white; border: 1px solid #ccc; border-top: none;
+            max-height: 300px; overflow-y: auto; display: none; z-index: 1001;
+        }
+        .suggestion-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .suggestion-item:hover { background: #f0f0f0; }
+
+        button { padding: 10px 20px; cursor: pointer; border-radius: 6px; border: none; background: var(--primary); color: white; font-weight: bold; white-space: nowrap; }
+        #read-btn { background: var(--success); }
+        
+        #content { background: white; padding: 40px; margin-top: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        /* Cleaned Elements */
+        img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0; display: block; background: #eee; }
+        
+        .wiki-collapse { margin: 20px 0; border: 1px solid #ddd; border-radius: 6px; }
+        summary { padding: 15px; background: #f8f9fa; cursor: pointer; font-weight: bold; list-style: none; }
+        summary::before { content: "📦 "; margin-right: 10px; }
+        
+        .ref-section summary { background: #fff1f1; }
+        .ref-section summary::before { content: "🔗 "; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+
+        .truncated-list-container summary { background: none; padding: 5px; font-size: 0.9em; color: var(--primary); font-weight: normal; }
+        .truncated-list-container summary::before { content: "📂 "; }
+    </style>
+</head>
+<body>
+
+<div class="header-anchor">
+    <div class="controls">
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Search Wikipedia..." autocomplete="off">
+            <div id="suggestions"></div>
+        </div>
+        <button id="read-btn" onclick="toggleSpeech()">🔊 Read From View</button>
+    </div>
+</div>
+
+<div id="content" role="main">
+    <h1>Wikipedia Reader</h1>
+    <p>Use the search box above to load a simplified article.</p>
+</div>
+
+<script>
+    let currentUtterance = null;
+    let debounceTimer;
+
+    // --- Search Logic ---
+    const searchInput = document.getElementById('search-input');
+    const suggestionsBox = document.getElementById('suggestions');
+
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const query = searchInput.value.trim();
+        if (query.length < 2) { suggestionsBox.style.display = 'none'; return; }
+        debounceTimer = setTimeout(async () => {
+            const res = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&format=json&origin=*&search=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            showSuggestions(data[1]);
+        }, 300);
+    });
+
+    function showSuggestions(list) {
+        suggestionsBox.innerHTML = '';
+        if (!list.length) { suggestionsBox.style.display = 'none'; return; }
+        list.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'suggestion-item';
+            div.textContent = item;
+            div.onclick = () => { searchInput.value = item; suggestionsBox.style.display = 'none'; performSearch(); };
+            suggestionsBox.appendChild(div);
+        });
+        suggestionsBox.style.display = 'block';
+    }
+
+    searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') performSearch(); });
+    function performSearch() {
+        const query = searchInput.value.trim();
+        if (query) {
+            suggestionsBox.style.display = 'none';
+            window.location.hash = `!${encodeURIComponent(query)}`;
+        }
+    }
+
+    // --- Loading & Processing ---
+    window.addEventListener('hashchange', loadFromHash);
+    window.addEventListener('load', loadFromHash);
+
+    function loadFromHash() {
+        const hash = window.location.hash.substring(2);
+        if (hash) fetchWikiData(decodeURIComponent(hash));
+    }
+
+    async function fetchWikiData(title) {
+        const contentDiv = document.getElementById('content');
+        contentDiv.innerHTML = "<h2>Loading...</h2>";
+        window.speechSynthesis.cancel();
+
+        try {
+            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            // Use DOMParser to prevent browser from loading broken image links immediately
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data.parse.text['*'], 'text/html');
+            const container = doc.body;
+
+            processContent(container);
+
+            contentDiv.innerHTML = `<h1>${data.parse.displaytitle}</h1>`;
+            contentDiv.appendChild(container);
+            window.scrollTo(0, 0);
+        } catch (err) { contentDiv.innerHTML = "<h2>Error loading article.</h2>"; }
+    }
+
+    function processContent(container) {
+        // 1. Scrub Clutter
+        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .mw-empty-elt, .metadata, .ambox').forEach(el => el.remove());
+
+        // 2. REPAIR IMAGES (Essential fix for local file:// errors)
+        container.querySelectorAll('img').forEach(img => {
+            const rawSrc = img.getAttribute('src');
+            if (rawSrc) {
+                if (rawSrc.startsWith('//')) img.src = 'https:' + rawSrc;
+                else if (rawSrc.startsWith('/')) img.src = 'https://en.wikipedia.org' + rawSrc;
+            }
+            img.removeAttribute('srcset'); // Strip srcset as it often contains broken relative paths
+        });
+
+        // 3. Fix Links
+        container.querySelectorAll('a').forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && href.startsWith('/wiki/') && !href.includes(':')) {
+                link.href = `#!${href.replace('/wiki/', '')}`;
+            }
+        });
+
+        // 4. Collapse Reference/External sections
+        const headers = container.querySelectorAll('h2, h3');
+        headers.forEach(header => {
+            const t = header.innerText.toLowerCase();
+            if (t.includes('reference') || t.includes('external link') || t.includes('further reading')) {
+                const details = document.createElement('details');
+                details.className = 'wiki-collapse ref-section';
+                details.innerHTML = `<summary>${header.innerText}</summary>`;
+                
+                let next = header.nextElementSibling;
+                while (next && !['H2', 'H3'].includes(next.tagName)) {
+                    let toMove = next;
+                    next = next.nextElementSibling;
+                    details.appendChild(toMove);
+                }
+                header.parentNode.replaceChild(details, header);
+            }
+        });
+
+        // 5. Expandable Tables
+        container.querySelectorAll('table').forEach((table, i) => {
+            const cap = table.querySelector('caption')?.innerText || table.querySelector('th')?.innerText || "Data Table " + (i + 1);
+            const details = document.createElement('details');
+            details.className = 'wiki-collapse';
+            details.innerHTML = `<summary>Table of ${table.querySelectorAll('tr').length} rows called "${cap.trim()}"</summary>`;
+            details.appendChild(table.cloneNode(true));
+            table.parentNode.replaceChild(details, table);
+        });
+
+        // 6. List Logic (>5 extra)
+        container.querySelectorAll('ul, ol').forEach(list => {
+            const items = Array.from(list.children);
+            if (items.length > 10) {
+                const details = document.createElement('details');
+                details.className = 'truncated-list-container';
+                details.innerHTML = `<summary>Show ${items.length - 5} more items</summary>`;
+                items.slice(5).forEach(item => details.appendChild(item));
+                list.appendChild(details);
+            }
+        });
+    }
+
+    // --- Speech Logic ---
+    function toggleSpeech() {
+        if (window.speechSynthesis.speaking) {
+            window.speechSynthesis.cancel();
+            document.getElementById('read-btn').innerText = "🔊 Read From View";
+            return;
+        }
+
+        const text = getVisibleText();
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.onend = () => document.getElementById('read-btn').innerText = "🔊 Read From View";
+        document.getElementById('read-btn').innerText = "🛑 Stop Reading";
+        window.speechSynthesis.speak(currentUtterance);
+    }
+
+    function getVisibleText() {
+        // Find elements inside #content
+        const elements = document.getElementById('content').querySelectorAll('h1, h2, h3, p, li, summary');
+        let combinedText = "";
+        let started = false;
+
+        elements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            // 85px is the height of our sticky header
+            if (rect.bottom > 90) started = true; 
+            if (started) combinedText += el.innerText + ". ";
+        });
+        return combinedText || document.getElementById('content').innerText;
+    }
+</script>
+
+</body>
+</html>
