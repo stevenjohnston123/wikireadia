@@ -3,76 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wikipedia Voice Reader</title>
+    <title>Wiki Voice Reader Pro</title>
     <style>
-        :root { --primary: #0056b3; --success: #28a745; --bg: #f4f7f6; --header-h: 85px; }
+        :root { --primary: #0056b3; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; }
         body { font-family: system-ui, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 0 20px 40px 20px; background: var(--bg); color: #333; }
         
-        /* Sticky Header */
-        .header-anchor {
-            position: sticky; top: 0; background: var(--bg); padding: 20px 0 10px 0; z-index: 1000;
-        }
+        .header-anchor { position: sticky; top: 0; background: var(--bg); padding: 20px 0 10px 0; z-index: 1000; }
         .controls { 
-            background: white; padding: 12px; border-radius: 8px;
-            border: 1px solid #ddd; display: flex; gap: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative;
+            background: white; padding: 12px; border-radius: 8px; border: 1px solid #ddd;
+            display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+        .row { display: flex; gap: 10px; width: 100%; }
         
         .search-container { flex-grow: 1; position: relative; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
         
         #suggestions {
             position: absolute; top: 100%; left: 0; right: 0; 
-            background: white; border: 1px solid #ccc; border-top: none;
-            max-height: 300px; overflow-y: auto; display: none; z-index: 1001;
+            background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; display: none; z-index: 1001;
         }
         .suggestion-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
         .suggestion-item:hover { background: #f0f0f0; }
 
         button { padding: 10px 20px; cursor: pointer; border-radius: 6px; border: none; background: var(--primary); color: white; font-weight: bold; white-space: nowrap; }
-        #read-btn { background: var(--success); }
+        #read-btn { background: var(--success); min-width: 150px; }
+        #read-btn.playing { background: var(--danger); }
         
         #content { background: white; padding: 40px; margin-top: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         
-        /* Cleaned Elements */
         img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0; display: block; background: #eee; }
-        
         .wiki-collapse { margin: 20px 0; border: 1px solid #ddd; border-radius: 6px; }
         summary { padding: 15px; background: #f8f9fa; cursor: pointer; font-weight: bold; list-style: none; }
-        summary::before { content: "📦 "; margin-right: 10px; }
-        
-        .ref-section summary { background: #fff1f1; }
-        .ref-section summary::before { content: "🔗 "; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-
-        .truncated-list-container summary { background: none; padding: 5px; font-size: 0.9em; color: var(--primary); font-weight: normal; }
-        .truncated-list-container summary::before { content: "📂 "; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; display: block; overflow-x: auto; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
     </style>
 </head>
 <body>
 
-<div class="header-anchor">
+<div class="header-anchor" aria-hidden="true">
     <div class="controls">
-        <div class="search-container">
-            <input type="text" id="search-input" placeholder="Search Wikipedia..." autocomplete="off">
-            <div id="suggestions"></div>
+        <div class="row">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search Wikipedia..." autocomplete="off">
+                <div id="suggestions"></div>
+            </div>
+            <button onclick="performSearch()">Search</button>
         </div>
-        <button id="read-btn" onclick="toggleSpeech()">🔊 Read From View</button>
+        <div class="row">
+            <select id="voice-select"><option>Loading voices...</option></select>
+            <button id="read-btn" onclick="toggleSpeech()">🔊 Start Reading</button>
+        </div>
     </div>
 </div>
 
-<div id="content" role="main">
+<article id="content">
     <h1>Wikipedia Reader</h1>
-    <p>Use the search box above to load a simplified article.</p>
-</div>
+    <p>Search for a topic. The "Start Reading" button will use your selected voice to read the visible text.</p>
+</article>
 
 <script>
     let currentUtterance = null;
     let debounceTimer;
+    let voices = [];
 
-    // --- Search Logic ---
+    // --- Voice Picker Logic ---
+    function populateVoices() {
+        voices = window.speechSynthesis.getVoices();
+        const voiceSelect = document.getElementById('voice-select');
+        voiceSelect.innerHTML = '';
+
+        // Sort voices to put "Premium", "Enhanced", or "Siri" at the top
+        const sortedVoices = voices.sort((a, b) => {
+            const getRank = (name) => (name.includes('Premium') || name.includes('Enhanced') || name.includes('Siri')) ? 0 : 1;
+            return getRank(a.name) - getRank(b.name);
+        });
+
+        sortedVoices.forEach((voice, i) => {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `${voice.name} (${voice.lang})`;
+            if (voice.default) option.selected = true;
+            voiceSelect.appendChild(option);
+        });
+    }
+
+    // iPhone/Chrome requires this event to load voices
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+    populateVoices();
+
+    // --- Search & Autocomplete ---
     const searchInput = document.getElementById('search-input');
     const suggestionsBox = document.getElementById('suggestions');
 
@@ -109,7 +128,7 @@
         }
     }
 
-    // --- Loading & Processing ---
+    // --- Navigation & Fetching ---
     window.addEventListener('hashchange', loadFromHash);
     window.addEventListener('load', loadFromHash);
 
@@ -122,13 +141,13 @@
         const contentDiv = document.getElementById('content');
         contentDiv.innerHTML = "<h2>Loading...</h2>";
         window.speechSynthesis.cancel();
+        updateBtnState(false);
 
         try {
             const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle`;
             const response = await fetch(url);
             const data = await response.json();
             
-            // Use DOMParser to prevent browser from loading broken image links immediately
             const parser = new DOMParser();
             const doc = parser.parseFromString(data.parse.text['*'], 'text/html');
             const container = doc.body;
@@ -142,20 +161,14 @@
     }
 
     function processContent(container) {
-        // 1. Scrub Clutter
         container.querySelectorAll('.mw-editsection, .infobox, .navbox, .mw-empty-elt, .metadata, .ambox').forEach(el => el.remove());
 
-        // 2. REPAIR IMAGES (Essential fix for local file:// errors)
         container.querySelectorAll('img').forEach(img => {
-            const rawSrc = img.getAttribute('src');
-            if (rawSrc) {
-                if (rawSrc.startsWith('//')) img.src = 'https:' + rawSrc;
-                else if (rawSrc.startsWith('/')) img.src = 'https://en.wikipedia.org' + rawSrc;
-            }
-            img.removeAttribute('srcset'); // Strip srcset as it often contains broken relative paths
+            const src = img.getAttribute('src');
+            if (src) img.src = src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://en.wikipedia.org' + src : src);
+            img.removeAttribute('srcset');
         });
 
-        // 3. Fix Links
         container.querySelectorAll('a').forEach(link => {
             const href = link.getAttribute('href');
             if (href && href.startsWith('/wiki/') && !href.includes(':')) {
@@ -163,26 +176,22 @@
             }
         });
 
-        // 4. Collapse Reference/External sections
+        // Collapse Sections & Tables
         const headers = container.querySelectorAll('h2, h3');
         headers.forEach(header => {
             const t = header.innerText.toLowerCase();
             if (t.includes('reference') || t.includes('external link') || t.includes('further reading')) {
                 const details = document.createElement('details');
-                details.className = 'wiki-collapse ref-section';
+                details.className = 'wiki-collapse';
                 details.innerHTML = `<summary>${header.innerText}</summary>`;
-                
                 let next = header.nextElementSibling;
                 while (next && !['H2', 'H3'].includes(next.tagName)) {
-                    let toMove = next;
-                    next = next.nextElementSibling;
-                    details.appendChild(toMove);
+                    let toMove = next; next = next.nextElementSibling; details.appendChild(toMove);
                 }
                 header.parentNode.replaceChild(details, header);
             }
         });
 
-        // 5. Expandable Tables
         container.querySelectorAll('table').forEach((table, i) => {
             const cap = table.querySelector('caption')?.innerText || table.querySelector('th')?.innerText || "Data Table " + (i + 1);
             const details = document.createElement('details');
@@ -192,12 +201,10 @@
             table.parentNode.replaceChild(details, table);
         });
 
-        // 6. List Logic (>5 extra)
         container.querySelectorAll('ul, ol').forEach(list => {
             const items = Array.from(list.children);
             if (items.length > 10) {
                 const details = document.createElement('details');
-                details.className = 'truncated-list-container';
                 details.innerHTML = `<summary>Show ${items.length - 5} more items</summary>`;
                 items.slice(5).forEach(item => details.appendChild(item));
                 list.appendChild(details);
@@ -209,27 +216,42 @@
     function toggleSpeech() {
         if (window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
-            document.getElementById('read-btn').innerText = "🔊 Read From View";
+            updateBtnState(false);
             return;
         }
 
         const text = getVisibleText();
         currentUtterance = new SpeechSynthesisUtterance(text);
-        currentUtterance.onend = () => document.getElementById('read-btn').innerText = "🔊 Read From View";
-        document.getElementById('read-btn').innerText = "🛑 Stop Reading";
+        
+        // Apply selected voice
+        const selectedIndex = document.getElementById('voice-select').value;
+        if (voices[selectedIndex]) currentUtterance.voice = voices[selectedIndex];
+
+        currentUtterance.onend = () => updateBtnState(false);
+        currentUtterance.onerror = () => updateBtnState(false);
+
+        updateBtnState(true);
         window.speechSynthesis.speak(currentUtterance);
     }
 
+    function updateBtnState(isPlaying) {
+        const btn = document.getElementById('read-btn');
+        if (isPlaying) {
+            btn.innerText = "🛑 Stop Reading";
+            btn.classList.add('playing');
+        } else {
+            btn.innerText = "🔊 Start Reading";
+            btn.classList.remove('playing');
+        }
+    }
+
     function getVisibleText() {
-        // Find elements inside #content
         const elements = document.getElementById('content').querySelectorAll('h1, h2, h3, p, li, summary');
         let combinedText = "";
         let started = false;
-
         elements.forEach(el => {
             const rect = el.getBoundingClientRect();
-            // 85px is the height of our sticky header
-            if (rect.bottom > 90) started = true; 
+            if (rect.bottom > 120) started = true; 
             if (started) combinedText += el.innerText + ". ";
         });
         return combinedText || document.getElementById('content').innerText;
