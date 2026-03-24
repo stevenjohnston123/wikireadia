@@ -6,14 +6,17 @@
     <title>Wikireadia</title>
     <style>
         :root { 
-            --primary: #0056b3; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; 
+            --primary: black;
+            --success: #28a745;
+            --danger: #dc3545;
+            --bg: #f4f7f6; 
             --highlight: #fff9c4; 
             --header-height: 130px; 
         }
         
 
         html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%;    overflow-x: hidden;   position: relative;}}
-        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; max-width: 1000px; margin: 0 auto; color: #222; }
+        body { font-family: sans-serif, system-ui, -apple-system; line-height: 1.5; max-width: 1000px; margin: 0 auto; color: black; }
         
         .header-anchor { position: fixed; top: 0; left: 0; right: 0; background: var(--bg); padding: 10px 15px; z-index: 9999; border-bottom: 1px solid rgba(0,0,0,0.1); }
         .controls-wrapper { max-width: 800px; margin: 0 auto; }
@@ -48,15 +51,15 @@
 
         #content { background: white; padding: 5px; margin: calc(var(--header-height) + 20px) 15px 100px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
 
-        .readable { scroll-margin-top: calc(var(--header-height) + 30px); border-radius: 4px; padding: 2px 4px; display: block; }
+        .readable { scroll-margin-top: calc(var(--header-height) + 30px); border-radius: 4px; padding: 2px 4px; display: block; background: white }
         .reading-highlight { background-color: var(--highlight) !important; box-shadow: 0 0 0 2px var(--highlight); }
         
         h1.readable { font-size: 1.8rem; border-bottom: 2px solid #eee; margin-top: 0; }
         h2.readable { font-size: 1.4rem; border-bottom: 1px solid #eee; color: var(--primary); margin-top: 1.5em; }
         
-        .reader-caption { font-size: 0.9rem; font-style: italic; color: #555; background: #f9f9f9; padding: 10px; border-left: 4px solid var(--primary); margin: 10px 0; }
-        .wiki-img-wrapper { max-width: 100%; margin: 20px 0; text-align: center; }
-        img { max-width: 100%; border-radius: 8px; }
+        .reader-caption { font-size: 0.9rem; font-style: italic; color: #555; padding: 10px; border-left: 4px solid var(--primary); margin: 10px 0; }
+        .wiki-img-wrapper { max-width: 100%; margin: 10px 0; text-align: center; }
+        img { width: 100%; border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -100,7 +103,7 @@
             const opt = document.createElement('option');
             opt.value = i;
             opt.textContent = voice.name;
-            if (voice.name.includes("Daniel") || voice.name.includes("Samantha")) opt.selected = true;
+            if (voice.name.includes("Daniel")) opt.selected = true;
             voiceSelect.appendChild(opt);
         });
     }
@@ -237,7 +240,7 @@
         container.querySelectorAll('.mw-editsection, .infobox, .navbox, .sidebar, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist, .hatnote').forEach(el => el.remove());
 
         // Process Images
-        container.querySelectorAll('.thumb, figure').forEach(thumb => {
+        container.querySelectorAll('.thumb, figure, img').forEach(thumb => {
             const img = thumb.querySelector('img');
             const cap = thumb.querySelector('.thumbcaption, figcaption');
             const wrapper = document.createElement('div');
@@ -261,12 +264,12 @@
         });
 
         // Tag headers, paragraphs, and ENTIRE lists for reading
-        container.querySelectorAll('h2, h3, p, ol').forEach(el => {
+        container.querySelectorAll('h1, h2, h3, p, ol').forEach(el => {
             if (el.innerText.trim().length > 2) el.classList.add('readable');
         });
 
 
-        container.querySelectorAll('.toc', '.reference', ".IPA").forEach(el => {
+        container.querySelectorAll('.toc', '.reference', ".IPA", ".mw-content-ltr").forEach(el => {
                 el.classList.remove('readable');
             });
     
