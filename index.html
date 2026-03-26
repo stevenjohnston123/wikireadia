@@ -89,11 +89,11 @@
     let readableElements = [];
     let debounceTimer;
 
-    // VOICE SETUP
     function populateVoices() {
         const voiceSelect = document.getElementById('voice-select');
         const englishVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
         voiceSelect.innerHTML = '';
+        console.log(englishVoices)
         englishVoices.forEach((voice, i) => {
             const opt = document.createElement('option');
             opt.value = i;
@@ -102,7 +102,10 @@
             voiceSelect.appendChild(opt);
         });
     }
+
     window.speechSynthesis.onvoiceschanged = populateVoices;
+    populateVoices();
+
 
     // SPEECH CONTROLS
     function toggleSpeech() { isReading ? stopSpeech() : startSpeech(); }
