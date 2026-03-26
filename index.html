@@ -14,8 +14,7 @@
             --header-height: 130px; 
         }
         
-
-        html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%;    overflow-x: hidden;   position: relative;}}
+        html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%; overflow-x: hidden; position: relative; }
         body { font-family: sans-serif, system-ui, -apple-system; line-height: 1.5; max-width: 1000px; margin: 0 auto; color: black; }
         
         .header-anchor { position: fixed; top: 0; left: 0; right: 0; background: var(--bg); padding: 10px 15px; z-index: 9999; border-bottom: 1px solid rgba(0,0,0,0.1); }
@@ -23,43 +22,39 @@
         .controls { background: white; padding: 10px; border-radius: 12px; border: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
         .row { display: flex; gap: 8px; align-items: center; }
-        .search-container { flex-grow: 1; position: relative; }
-        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        .search-container { flex-grow: 1; position: relative; display: flex; align-items: center; }
         
+        /* Updated Search Box with X Button */
+        input { width: 100%; padding: 10px 35px 10px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        #clear-search { 
+            position: absolute; right: 10px; cursor: pointer; color: #999; font-weight: bold; 
+            font-size: 1.2rem; user-select: none; z-index: 10;
+        }
+
         #voice-select { width: auto; max-width: 100px; padding: 8px; border: 1px solid #eee; font-size: 0.8rem; border-radius: 8px; background: #fafafa; }
         
-        /* Updated Rectangular Buttons */
         .media-btns { display: flex; width: 100%; gap: 2px; border-radius: 8px; overflow: hidden; }
-        .icon-btn { 
-            flex: 1; 
-            height: 28px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            border: none; 
-            background: #e0e0e0; 
-            cursor: pointer; 
-            font-size: 1.2rem; 
-            transition: background 0.2s;
-        }
-        .icon-btn:active { background: #d0d0d0; }
+        .icon-btn { flex: 1; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: #e0e0e0; cursor: pointer; font-size: 1.2rem; transition: background 0.2s; }
         .icon-btn.play-toggle { background: var(--success); color: white; }
         .icon-btn.play-toggle.playing { background: var(--danger); }
 
         #suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; display: none; z-index: 10001; border-radius: 0 0 8px 8px; }
         .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
 
-        #content { background: white; padding: 5px; margin: calc(var(--header-height) + 20px) 15px 100px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
+        #content { background: white; padding: 20px; margin: calc(var(--header-height) + 20px) 15px 100px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
 
-        .readable { scroll-margin-top: calc(var(--header-height) + 30px); border-radius: 4px; padding: 2px 4px; display: block; background: white }
+        .readable { scroll-margin-top: calc(var(--header-height) + 40px); border-radius: 4px; padding: 2px 4px; display: block; background: white; }
         .reading-highlight { background-color: var(--highlight) !important; box-shadow: 0 0 0 2px var(--highlight); }
         
-        h1.readable { font-size: 1.8rem; border-bottom: 2px solid #eee; margin-top: 0; }
-        h2.readable { font-size: 1.4rem; border-bottom: 1px solid #eee; color: var(--primary); margin-top: 1.5em; }
+        .readable {background: lightpink}
+        /* Table of Contents Styles */
+        .toc { background: #f8f9fa; border: 1px solid #a2a9b1; padding: 10px; font-size: 0.9rem; border-radius: 8px; margin: 15px 0; display: block; width: fit-content; max-width: 100%; box-sizing: border-box; }
+        .toc h2 { font-size: 1rem; margin: 0 0 5px 0; border: none; }
+        .toc ul { list-style: none; padding-left: 1.2em; margin: 0; }
+        .toc a { text-decoration: none; color: #0645ad; }
         
-        .reader-caption { font-size: 0.9rem; font-style: italic; color: #555; padding: 10px; border-left: 4px solid var(--primary); margin: 10px 0; }
-        .wiki-img-wrapper { max-width: 100%; margin: 10px 0; text-align: center; }
-        img { width: 100%; border-radius: 2px; }
+        .wiki-img-wrapper { max-width: 400px;  margin: 20px auto; text-align: center; }
+        img { width: 100%; height: auto; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -69,15 +64,16 @@
         <div class="controls">
             <div class="row">
                 <div class="search-container">
-                    <input type="text" id="search-input" placeholder="Search Wikipedia..." autocomplete="off" onkeydown="if(event.key==='Enter') performSearch()">
+                    <input type="text" id="search-input" placeholder="Search Wikipedia..." autocomplete="off">
+                    <span id="clear-search" onclick="clearSearch()">&times;</span>
                     <div id="suggestions"></div>
                 </div>
                 <select id="voice-select"></select>
             </div>
             <div class="media-btns">
-                <button class="icon-btn" onclick="navSegment(-1)" title="Back">⏮</button>
-                <button id="play-btn" class="icon-btn play-toggle" onclick="toggleSpeech()" title="Play/Pause">▶</button>
-                <button class="icon-btn" onclick="navSegment(1)" title="Next">⏭</button>
+                <button class="icon-btn" onclick="navSegment(-1)">⏮</button>
+                <button id="play-btn" class="icon-btn play-toggle" onclick="toggleSpeech()">▶</button>
+                <button class="icon-btn" onclick="navSegment(1)">⏭</button>
             </div>
         </div>
     </div>
@@ -85,7 +81,7 @@
 
 <article id="content">
     <h1 class="readable">Ready to Read</h1>
-    <p class="readable">Search a topic above or click a link in an article. Use the controls to navigate sections.</p>
+    <p class="readable">Search a topic above to begin.</p>
 </article>
 
 <script>
@@ -94,11 +90,11 @@
     let readableElements = [];
     let debounceTimer;
 
+    // VOICE SETUP
     function populateVoices() {
         const voiceSelect = document.getElementById('voice-select');
         const englishVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
         voiceSelect.innerHTML = '';
-        console.log(englishVoices)
         englishVoices.forEach((voice, i) => {
             const opt = document.createElement('option');
             opt.value = i;
@@ -108,26 +104,17 @@
         });
     }
     window.speechSynthesis.onvoiceschanged = populateVoices;
-    populateVoices();
 
+    // SPEECH CONTROLS
     function toggleSpeech() { isReading ? stopSpeech() : startSpeech(); }
-
-    function stopSpeech() {
-        isReading = false;
-        window.speechSynthesis.cancel();
-        updateBtn(false);
-    }
+    function stopSpeech() { isReading = false; window.speechSynthesis.cancel(); updateBtn(false); }
 
     function startSpeech() {
         refreshReadableList();
         if (readableElements.length === 0) return;
-        
         const visibleIdx = readableElements.findIndex(el => el.getBoundingClientRect().top >= 150);
         currentElementIndex = visibleIdx === -1 ? 0 : visibleIdx;
-
-        isReading = true;
-        updateBtn(true);
-        speakCurrent();
+        isReading = true; updateBtn(true); speakCurrent();
     }
 
     function refreshReadableList() {
@@ -138,43 +125,24 @@
     function navSegment(direction) {
         stopSpeech();
         refreshReadableList();
-
-        currentElementIndex += direction;
-        if (currentElementIndex < 0) currentElementIndex = 0;
-        if (currentElementIndex >= readableElements.length) {
-            currentElementIndex = readableElements.length - 1;
-            return;
-        }
-
-        isReading = true;
-        updateBtn(true);
-        speakCurrent();
+        currentElementIndex = Math.max(0, Math.min(currentElementIndex + direction, readableElements.length - 1));
+        isReading = true; updateBtn(true); speakCurrent();
     }
 
     function speakCurrent() {
         if (!isReading || currentElementIndex >= readableElements.length) { stopSpeech(); return; }
-        navigator.wakeLock.request('screen');
-
         const el = readableElements[currentElementIndex];
         document.querySelectorAll('.reading-highlight').forEach(e => e.classList.remove('reading-highlight'));
         el.classList.add('reading-highlight');
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         const utterance = new SpeechSynthesisUtterance(el.innerText);
-        const englishVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
         const selectedIndex = document.getElementById('voice-select').value;
-        if (englishVoices[selectedIndex]) utterance.voice = englishVoices[selectedIndex];
+        const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+        if (voices[selectedIndex]) utterance.voice = voices[selectedIndex];
 
-        utterance.onend = () => {
-            if (isReading) {
-                currentElementIndex++;
-                setTimeout(speakCurrent, 300);
-            }
-        };
-
-        setTimeout(() => {
-            if (isReading) window.speechSynthesis.speak(utterance);
-        }, 50);
+        utterance.onend = () => { if (isReading) { currentElementIndex++; setTimeout(speakCurrent, 300); } };
+        setTimeout(() => { if (isReading) window.speechSynthesis.speak(utterance); }, 50);
     }
 
     function updateBtn(playing) {
@@ -183,50 +151,55 @@
         btn.classList.toggle("playing", playing);
     }
 
-    function performSearch() {
-        const query = document.getElementById('search-input').value.trim();
-        if (query) {
-            document.getElementById('suggestions').style.display = 'none';
-            window.location.hash = `!${encodeURIComponent(query)}`;
-        }
+    // SEARCH & DATA FETCHING
+    function clearSearch() {
+        const input = document.getElementById('search-input');
+        input.value = '';
+        //document.getElementById('clear-search').style.display = 'none';
+        document.getElementById('suggestions').style.display = 'none';
+        input.focus();
     }
-
-    window.addEventListener('hashchange', () => {
-        const hash = window.location.hash.substring(2);
-        if (hash) fetchWikiData(decodeURIComponent(hash));
-    });
 
     async function fetchWikiData(title) {
         const contentDiv = document.getElementById('content');
         contentDiv.innerHTML = "<h2>Loading Article...</h2>";
+        
+        // Navigation auto-clears search
+        const input = document.getElementById('search-input');
+        input.value = '';
+        //document.getElementById('clear-search').style.display = 'none';
+        document.getElementById('suggestions').style.display = 'none';
+        
         stopSpeech();
 
         try {
-            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle`;
+            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle&redirects=1`;
             const response = await fetch(url);
             const data = await response.json();
+            
             const parser = new DOMParser();
             const doc = parser.parseFromString(data.parse.text['*'], 'text/html');
-            const container = doc.body;
+            const container = doc.querySelector('.mw-parser-output') || doc.body;
 
             cleanWikiHtml(container);
 
             contentDiv.innerHTML = `<h1 class="readable">${data.parse.displaytitle}</h1>`;
             contentDiv.appendChild(container);
             
-            // Re-bind links to stay in-app
             contentDiv.querySelectorAll('a').forEach(link => {
                 const href = link.getAttribute('href');
                 if (href && href.startsWith('/wiki/') && !href.includes(':')) {
                     link.onclick = (e) => {
                         e.preventDefault();
-                        const newTitle = href.replace('/wiki/', '');
-                        window.location.hash = `!${newTitle}`;
+                        window.location.hash = `!${href.replace('/wiki/', '')}`;
                     };
                 } else if (href && href.startsWith('#')) {
-                    link.onclick = (e) => e.preventDefault(); // Disable internal jumps to keep reader focus
-                } else {
-                    link.setAttribute('target', '_blank');
+                    link.onclick = (e) => {
+                        e.preventDefault();
+                        const targetId = decodeURIComponent(href.substring(1));
+                        const targetEl = document.getElementById(targetId) || document.getElementsByName(targetId)[0];
+                        if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth' });
+                    };
                 }
             });
 
@@ -237,61 +210,70 @@
     }
 
     function cleanWikiHtml(container) {
-        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .sidebar, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist, .hatnote').forEach(el => el.remove());
+        // Removed '.toc' from deletion list
+        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .sidebar, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist, .hatnote, .reference').forEach(el => el.remove());
 
-        // Process Images
         container.querySelectorAll('.thumb, figure, img').forEach(thumb => {
             const img = thumb.querySelector('img');
             const cap = thumb.querySelector('.thumbcaption, figcaption');
             const wrapper = document.createElement('div');
             wrapper.className = 'wiki-img-wrapper';
-            if (cap) {
-                const cleanText = cap.innerText.replace(/\[\d+\]/g, "").trim();
-                if (cleanText.length > 2) {
-                    const span = document.createElement('span');
-                    span.className = 'reader-caption readable';
-                    span.innerText = "Image: " + cleanText;
-                    wrapper.appendChild(span);
-                }
+            if (cap && cap.innerText.trim().length > 2) {
+                const span = document.createElement('span');
+                span.className = 'reader-caption readable';
+                span.innerText = "Image: " + cap.innerText.replace(/\[\d+\]/g, "").trim();
+                wrapper.appendChild(span);
             }
             if (img) {
                 const ni = document.createElement('img');
-                const src = img.getAttribute('src');
+                let src = img.getAttribute('src');
                 ni.src = src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://en.wikipedia.org' + src : src);
                 wrapper.appendChild(ni);
             }
             thumb.parentNode.replaceChild(wrapper, thumb);
         });
 
-        // Tag headers, paragraphs, and ENTIRE lists for reading
-        container.querySelectorAll('h1, h2, h3, p, ol').forEach(el => {
-            if (el.innerText.trim().length > 2) el.classList.add('readable');
+        // Tag readable elements but skip TOC content
+        container.querySelectorAll('h1, h2, h3, p, ul, ol').forEach(el => {
+            if (el.innerText.trim().length > 2 && !el.closest('.toc')) {
+                el.classList.add('readable');
+            }
         });
-
-
-        container.querySelectorAll('.toc', '.reference', ".IPA", ".mw-content-ltr").forEach(el => {
-                el.classList.remove('readable');
-            });
-    
-
     }
 
-    document.getElementById('search-input').addEventListener('input', (e) => {
+    // SEARCH INPUT LISTENERS
+    const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search');
+
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            window.location.hash = `!${encodeURIComponent(searchInput.value.trim())}`;
+        }
+    });
+
+    searchInput.addEventListener('input', (e) => {
         clearTimeout(debounceTimer);
         const q = e.target.value;
+        clearBtn.style.display = q.length > 0 ? 'block' : 'none';
+        
         if (q.length < 2) { document.getElementById('suggestions').style.display = 'none'; return; }
         debounceTimer = setTimeout(async () => {
             const res = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&format=json&origin=*&search=${encodeURIComponent(q)}`);
             const data = await res.json();
-            const box = document.getElementById('suggestions');
-            box.innerHTML = '';
+            const suggestionBox = document.getElementById('suggestions');
+            suggestionBox.innerHTML = '';
             data[1].forEach(item => {
                 const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = item;
-                d.onclick = () => { document.getElementById('search-input').value = item; box.style.display = 'none'; performSearch(); };
-                box.appendChild(d);
+                d.onclick = () => { window.location.hash = `!${encodeURIComponent(item)}`; };
+                suggestionBox.appendChild(d);
             });
-            box.style.display = data[1].length ? 'block' : 'none';
+            suggestionBox.style.display = data[1].length ? 'block' : 'none';
         }, 300);
+    });
+
+    window.addEventListener('hashchange', () => {
+        const hash = window.location.hash.substring(2);
+        if (hash) fetchWikiData(decodeURIComponent(hash));
     });
 
     if(window.location.hash) fetchWikiData(decodeURIComponent(window.location.hash.substring(2)));
