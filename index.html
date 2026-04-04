@@ -239,7 +239,7 @@
         });
 
         // Tag readable elements but skip TOC content
-        container.querySelectorAll('h1, h2, h3, p, ul, ol').forEach(el => {
+        container.querySelectorAll('h1, h2, h3, h4, h5, p, ul, ol').forEach(el => {
             if (el.innerText.trim().length > 2 && !el.closest('.toc')) {
                 el.classList.add('readable');
             }
