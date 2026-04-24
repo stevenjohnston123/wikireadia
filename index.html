@@ -14,6 +14,7 @@
             --active-match: #ff9800;
             --header-height: 130px; 
             --footer-height: 70px;
+            --link: #0645ad;
         }
         
         html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%; overflow-x: hidden; position: relative; }
@@ -55,24 +56,26 @@
         .readable { scroll-margin-top: calc(var(--header-height) + 40px); border-radius: 4px; padding: 2px 4px; display: block; background: white; }
         .reading-highlight { background-color: var(--highlight) !important; box-shadow: 0 0 0 2px var(--highlight); }
         
-        /* Find in Page Highlighting */
-        mark.find-match { background-color: #ffeb3b; color: black; border-radius: 2px; }
-        mark.find-match.active { background-color: var(--active-match); color: white; }
+        /* Custom Reconstructed TOC Styling */
+        .custom-toc { 
+            background: #f8f9fa; 
+            border: 1px solid #a2a9b1; 
+            padding: 20px; 
+            font-size: 0.95rem; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+            box-sizing: border-box; 
+        }
+        .custom-toc-title { font-weight: bold; font-size: 1.2rem; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 8px; display: block; }
+        .custom-toc-list { list-style: none; padding: 0; margin: 0; }
+        .custom-toc-item { margin: 6px 0; }
+        .custom-toc-link { text-decoration: none; color: var(--link); cursor: pointer; }
+        .custom-toc-link:hover { text-decoration: underline; }
+        .custom-toc-level-3 { padding-left: 20px; font-size: 0.9rem; }
+        .custom-toc-level-4 { padding-left: 40px; font-size: 0.85rem; }
 
-        /* TOC Styling */
-        .toc, #toc, .mw-toc { background: #f8f9fa; border: 1px solid #a2a9b1; padding: 12px; font-size: 0.95rem; border-radius: 8px; margin: 20px 0; display: block !important; width: fit-content; max-width: 100%; box-sizing: border-box; }
-        .toc h2, .toc-title { font-size: 1.1rem; margin: 0 0 10px 0; border: none; font-weight: bold; }
-        .toc ul { list-style: none; padding-left: 1.5em; margin: 0; }
-        .toc li { margin: 4px 0; }
-        .toc a { text-decoration: none; color: #0645ad; display: inline-block; }
-        .toc a:hover { text-decoration: underline; }
-        .tocnumber { color: #555; margin-right: 5px; font-size: 0.8rem; }
-        
         /* Math Styling */
         .mwe-math-element { overflow-x: auto; max-width: 100%; }
-        /* Inline math stays inline */
-        .math-inline { display: inline-flex; align-items: center; vertical-align: middle; margin: 0 2px; }
-        /* Block/Display math logic centered */
         .math-block { display: flex; justify-content: center; margin: 1.5rem 0; padding: 15px; background: rgba(0,0,0,0.03); border-radius: 8px; clear: both; }
 
         .wiki-img-wrapper { max-width: 400px;  margin: 20px auto; text-align: center; }
@@ -134,9 +137,8 @@
 
     let findMatches = [];
     let currentFindIndex = -1;
-    let pageWordCounts = {}; // Key: word, Value: frequency
+    let pageWordCounts = {};
 
-    // Helper to escape regex special characters
     function escapeRegExp(string) {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
@@ -166,14 +168,21 @@
     function startSpeech() {
         refreshReadableList();
         if (readableElements.length === 0) return;
-        const visibleIdx = readableElements.findIndex(el => el.getBoundingClientRect().top >= 150);
+        const visibleIdx = readableElements.findIndex(el => {
+            const rect = el.getBoundingClientRect();
+            return rect.top >= 130 && rect.top <= window.innerHeight;
+        });
         currentElementIndex = visibleIdx === -1 ? 0 : visibleIdx;
         isReading = true; updateBtn(true); speakCurrent();
     }
 
     function refreshReadableList() {
         readableElements = Array.from(document.querySelectorAll('.readable'))
-            .filter(el => el.innerText.trim().length > 0);
+            .filter(el => {
+                const text = el.innerText.trim();
+                const isHidden = window.getComputedStyle(el).display === 'none';
+                return text.length > 0 && !isHidden && !el.closest('.custom-toc');
+            });
     }
 
     function navSegment(direction) {
@@ -190,9 +199,7 @@
         el.classList.add('reading-highlight');
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        let speechText = el.innerText;
-        speechText = speechText.replace(/\[[a-zA-Z0-9]+\]/g, "");
-
+        let speechText = el.innerText.replace(/\[[a-zA-Z0-9]+\]/g, "");
         const utterance = new SpeechSynthesisUtterance(speechText);
         const selectedIndex = document.getElementById('voice-select').value;
         const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
@@ -219,6 +226,29 @@
         if (inputId === 'find-input') clearFind();
     }
 
+    function handleKeyboardNav(e, input, box) {
+        const items = box.querySelectorAll('.suggestion-item');
+        if (box.style.display === 'none' || items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+            updateSuggestionHighlight(box);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
+            updateSuggestionHighlight(box);
+        } else if (e.key === 'Enter') {
+            if (selectedSuggestionIndex >= 0) {
+                e.preventDefault();
+                items[selectedSuggestionIndex].click();
+            }
+        } else if (e.key === 'Escape') {
+            box.style.display = 'none';
+            selectedSuggestionIndex = -1;
+        }
+    }
+
     function updateSuggestionHighlight(box) {
         const items = box.querySelectorAll('.suggestion-item');
         items.forEach((item, index) => {
@@ -234,13 +264,12 @@
     async function fetchWikiData(title) {
         const contentDiv = document.getElementById('content');
         contentDiv.innerHTML = "<h2>Loading Article...</h2>";
-        
         document.getElementById('suggestions').style.display = 'none';
         clearFind();
         stopSpeech();
 
         try {
-            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle|images|headhtml&redirects=1`;
+            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle|sections|images&redirects=1`;
             const response = await fetch(url);
             const data = await response.json();
             
@@ -253,29 +282,48 @@
             cleanWikiHtml(container);
 
             contentDiv.innerHTML = `<h1 class="readable">${data.parse.displaytitle}</h1>`;
+            
+            if (data.parse.sections && data.parse.sections.length > 0) {
+                const tocDiv = document.createElement('div');
+                tocDiv.className = 'custom-toc';
+                tocDiv.id = 'article-toc';
+                tocDiv.innerHTML = `<span class="custom-toc-title">Contents</span>`;
+                const tocList = document.createElement('ul');
+                tocList.className = 'custom-toc-list';
+                
+                data.parse.sections.forEach(sec => {
+                    const li = document.createElement('li');
+                    li.className = `custom-toc-item custom-toc-level-${sec.level}`;
+                    const a = document.createElement('a');
+                    a.className = 'custom-toc-link';
+                    a.innerText = sec.line.replace(/<[^>]*>/g, ''); 
+                    a.onclick = () => {
+                        const target = document.getElementById(sec.anchor);
+                        if (target) target.scrollIntoView({ behavior: 'smooth' });
+                    };
+                    li.appendChild(a);
+                    tocList.appendChild(li);
+                });
+                
+                tocDiv.appendChild(tocList);
+                contentDiv.appendChild(tocDiv);
+            }
+            
             contentDiv.appendChild(container);
             
             contentDiv.querySelectorAll('a').forEach(link => {
                 const href = link.getAttribute('href');
                 if (href && href.startsWith('/wiki/')) {
-                    // Refined Wiki Title Extraction: Only strip the prefix, keep characters like colons
-                    const wikiTitle = href.substring(6); 
-                    
-                    // Filter out non-article namespaces (e.g., Help:, File:, etc.)
-                    const isNamespace = /^(File|Help|Category|Wikipedia|Talk|Portal|Special|Template):/i.test(wikiTitle);
-                    
-                    if (!isNamespace) {
-                        link.onclick = (e) => {
-                            e.preventDefault();
-                            // Decode to normalized form, then encode for the hash
-                            const normalizedTitle = decodeURIComponent(wikiTitle).replace(/_/g, ' ');
-                            window.location.hash = `!${encodeURIComponent(normalizedTitle)}`;
-                        };
-                    }
-                } else if (href && href.startsWith('#')) {
                     link.onclick = (e) => {
                         e.preventDefault();
-                        const targetId = decodeURIComponent(href.substring(1));
+                        const wikiTitle = decodeURIComponent(href.substring(6)).replace(/_/g, ' ');
+                        window.location.hash = `!${encodeURIComponent(wikiTitle)}`;
+                    };
+                } else if (href && (href.startsWith('#') || href.includes('#'))) {
+                    link.onclick = (e) => {
+                        e.preventDefault();
+                        const parts = href.split('#');
+                        const targetId = decodeURIComponent(parts[parts.length - 1]);
                         const targetEl = document.getElementById(targetId) || document.getElementsByName(targetId)[0];
                         if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth' });
                     };
@@ -288,47 +336,35 @@
             indexPageWords();
             
         } catch (err) { 
-            console.error(err);
-            contentDiv.innerHTML = `<h2>Article not found or error occurred: ${err.message}</h2>`; 
+            contentDiv.innerHTML = `<h2>Error: ${err.message}</h2>`; 
         }
     }
 
     function cleanWikiHtml(container) {
-        // Handle math elements first to preserve their context
+        const removals = [
+            '.mw-editsection', '.infobox', '.navbox', '.mw-empty-elt', 
+            '.metadata', '.ambox', 'style', 'script', '.legend', 
+            '.hatnote', '.shortdescription', '.noprint', '.mw-jump-link',
+            '.toc', '#toc', '.mw-toc',
+            '.sidebar', '.sidebar-collapse', '.nomobile', '.nowraplinks', '.hlist' // Removed per user request
+        ];
+        
+        removals.forEach(sel => container.querySelectorAll(sel).forEach(el => el.remove()));
+
         container.querySelectorAll('.mwe-math-element').forEach(mathEl => {
-            const imgs = mathEl.querySelectorAll('img');
-            imgs.forEach(img => {
+            mathEl.querySelectorAll('img').forEach(img => {
                 let src = img.getAttribute('src');
                 if (src && src.startsWith('//')) img.setAttribute('src', 'https:' + src);
             });
-
-            const style = mathEl.getAttribute('style') || "";
-            const isDisplayBlock = style.includes('display: block') || 
-                                 mathEl.closest('dl, center, .mwe-math-fallback-image-display') ||
-                                 mathEl.classList.contains('mwe-math-fallback-image-display');
-
-            if (isDisplayBlock) {
-                mathEl.classList.add('math-block');
-                const parentDl = mathEl.closest('dl');
-                if (parentDl) parentDl.classList.add('readable');
-            } else {
-                mathEl.classList.add('math-inline');
-            }
-        });
-
-        const selectorsToRemove = '.mw-editsection, .infobox, .navbox, .sidebar, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .hatnote';
-        container.querySelectorAll(selectorsToRemove).forEach(el => {
-            if (el.classList.contains('toc') || el.id === 'toc' || el.closest('.toc') || el.closest('#toc')) return; 
-            el.remove();
+            mathEl.classList.add('math-block');
         });
 
         container.querySelectorAll('.thumb, figure').forEach(thumb => {
-            if (thumb.querySelector('.mwe-math-element')) return;
             const img = thumb.querySelector('img');
             const cap = thumb.querySelector('.thumbcaption, figcaption');
             const wrapper = document.createElement('div');
             wrapper.className = 'wiki-img-wrapper';
-            if (cap && cap.innerText.trim().length > 2) {
+            if (cap) {
                 const span = document.createElement('span');
                 span.className = 'reader-caption readable';
                 span.innerText = "Image: " + cap.innerText.replace(/\[\d+\]/g, "").trim();
@@ -336,69 +372,42 @@
             }
             if (img) {
                 const ni = document.createElement('img');
-                let src = img.getAttribute('src');
-                ni.src = src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://en.wikipedia.org' + src : src);
+                let src = img.getAttribute('src') || img.dataset.src;
+                if (src) ni.src = src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://en.wikipedia.org' + src : src);
                 wrapper.appendChild(ni);
             }
             thumb.parentNode.replaceChild(wrapper, thumb);
         });
 
-        container.querySelectorAll('img').forEach(img => {
-            let src = img.getAttribute('src');
-            if (src && src.startsWith('//')) img.src = 'https:' + src;
-        });
-
-        // Mark readable elements
-        container.querySelectorAll('h1, h2, h3, h4, h5, p, ul, ol, dl, .toc, #toc, .mwe-math-element').forEach(el => {
-            const isRef = el.closest('.reflist');
-            if (el.innerText.trim().length > 1 && !isRef) el.classList.add('readable');
+        container.querySelectorAll('h1, h2, h3, h4, h5, p, ul, ol, dl, .mwe-math-element').forEach(el => {
+            if (el.innerText.trim().length > 1) {
+                el.classList.add('readable');
+            }
         });
     }
 
     function indexPageWords() {
         const content = document.getElementById('content');
         pageWordCounts = {};
-        
-        const addCount = (text) => {
-            if (!text) return;
-            const t = text.trim();
-            if (t.length < 3) return;
-            pageWordCounts[t] = (pageWordCounts[t] || 0) + 1;
-        };
-
-        content.querySelectorAll('a').forEach(link => {
-            const href = link.getAttribute('href') || '';
-            const isWikiLink = href.startsWith('/wiki/') || href.startsWith('https://en.wikipedia.org/wiki/');
-            if (isWikiLink && !link.innerText.includes('\n')) {
-                addCount(link.innerText);
-            }
-        });
-
         const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
         let node;
         while(node = walker.nextNode()){
-            const parent = node.parentElement;
-            if (!parent || parent.tagName === 'STYLE' || parent.tagName === 'SCRIPT' || parent.closest('.toc')) continue;
-            
-            const raw = node.nodeValue.split(/[^a-zA-ZÀ-ÿ0-9]/);
-            raw.forEach(w => { 
-                if (w.length > 3) addCount(w); 
-            });
+            if (node.parentElement.closest('.custom-toc')) continue;
+            const words = node.nodeValue.split(/[^a-zA-ZÀ-ÿ0-9]/);
+            words.forEach(w => { if (w.length > 3) pageWordCounts[w] = (pageWordCounts[w] || 0) + 1; });
         }
     }
 
     function jumpToTOC() {
-        const toc = document.querySelector('.toc, #toc, .mw-toc');
+        const toc = document.getElementById('article-toc');
         if (toc) toc.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        else document.querySelector('h1')?.scrollIntoView({ behavior: 'smooth' });
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function clearFind() {
         const content = document.getElementById('content');
-        const marks = content.querySelectorAll('mark.find-match');
-        marks.forEach(m => {
-            const textNode = document.createTextNode(m.textContent);
-            m.parentNode.replaceChild(textNode, m);
+        content.querySelectorAll('mark.find-match').forEach(m => {
+            m.parentNode.replaceChild(document.createTextNode(m.textContent), m);
         });
         content.normalize();
         findMatches = [];
@@ -408,30 +417,22 @@
     function performFind(query, scroll = false) {
         clearFind();
         if (!query || query.length < 2) return;
-        
         const content = document.getElementById('content');
         const textNodes = [];
         const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
         let node;
-        while(node = walker.nextNode()){
-            if (!/(style|script|mark|img|svg|input)/i.test(node.parentElement.tagName)) textNodes.push(node);
-        }
-
-        // Properly escape special characters in the query for regex
-        const escapedQuery = escapeRegExp(query);
-        const regex = new RegExp(`(${escapedQuery})`, 'gi');
+        while(node = walker.nextNode()) if (!/(style|script|mark|img|svg|input)/i.test(node.parentElement.tagName)) textNodes.push(node);
         
-        textNodes.forEach(textNode => {
-            const val = textNode.nodeValue;
-            if (regex.test(val)) {
+        const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+        textNodes.forEach(node => {
+            if (regex.test(node.nodeValue)) {
                 const span = document.createElement('span');
-                span.innerHTML = val.replace(regex, '<mark class="find-match">$1</mark>');
-                textNode.parentNode.replaceChild(span, textNode);
+                span.innerHTML = node.nodeValue.replace(regex, '<mark class="find-match">$1</mark>');
+                node.parentNode.replaceChild(span, node);
                 while (span.firstChild) span.parentNode.insertBefore(span.firstChild, span);
                 span.parentNode.removeChild(span);
             }
         });
-        
         findMatches = Array.from(content.querySelectorAll('mark.find-match'));
         if (findMatches.length > 0 && scroll) cycleFind(1);
     }
@@ -445,21 +446,10 @@
         active.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // Header Search
     const searchInput = document.getElementById('search-input');
     const suggestionBox = document.getElementById('suggestions');
 
-    searchInput.addEventListener('keydown', (e) => {
-        const items = suggestionBox.querySelectorAll('.suggestion-item');
-        if (e.key === 'ArrowDown') { e.preventDefault(); selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length; updateSuggestionHighlight(suggestionBox); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length; updateSuggestionHighlight(suggestionBox); }
-        else if (e.key === 'Enter') {
-            e.preventDefault();
-            const val = selectedSuggestionIndex >= 0 ? items[selectedSuggestionIndex].dataset.val : searchInput.value.trim();
-            if (val) { searchInput.value = val; window.location.hash = `!${encodeURIComponent(val)}`; }
-            suggestionBox.style.display = 'none';
-        }
-    });
+    searchInput.addEventListener('keydown', (e) => handleKeyboardNav(e, searchInput, suggestionBox));
 
     searchInput.addEventListener('input', (e) => {
         clearTimeout(debounceTimer);
@@ -472,7 +462,7 @@
             suggestionBox.innerHTML = '';
             selectedSuggestionIndex = -1;
             data[1].forEach(item => {
-                const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = item; d.dataset.val = item;
+                const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = item;
                 d.onclick = () => { searchInput.value = item; window.location.hash = `!${encodeURIComponent(item)}`; suggestionBox.style.display='none'; };
                 suggestionBox.appendChild(d);
             });
@@ -480,55 +470,32 @@
         }, 300);
     });
 
-    // Footer Find In Page
     const findInput = document.getElementById('find-input');
     const findBox = document.getElementById('find-suggestions');
 
     findInput.addEventListener('keydown', (e) => {
-        const items = findBox.querySelectorAll('.suggestion-item');
-        if (e.key === 'ArrowDown') { e.preventDefault(); selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length; updateSuggestionHighlight(findBox); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length; updateSuggestionHighlight(findBox); }
-        else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (selectedSuggestionIndex >= 0) {
-                const val = items[selectedSuggestionIndex].dataset.val;
-                findInput.value = val;
-                performFind(val, true);
-                findBox.style.display = 'none';
-                selectedSuggestionIndex = -1;
-            } else if (findMatches.length > 0) cycleFind(1);
-            else if (findInput.value.length >= 2) performFind(findInput.value, true);
+        if (findBox.style.display !== 'none') {
+            handleKeyboardNav(e, findInput, findBox);
+        } else if (e.key === 'Enter') {
+            performFind(findInput.value, true);
         }
     });
 
     findInput.addEventListener('input', (e) => {
         const q = e.target.value;
-        const qLower = q.toLowerCase();
         document.getElementById('clear-find').style.display = q.length > 0 ? 'block' : 'none';
-        findBox.innerHTML = '';
-        selectedSuggestionIndex = -1;
         performFind(q, false);
         if (q.length < 1) { findBox.style.display = 'none'; return; }
-
-        const sorted = Object.entries(pageWordCounts)
-            .filter(([word]) => word.toLowerCase().includes(qLower))
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 15);
-
-        sorted.forEach(([word, count]) => {
-            const d = document.createElement('div'); 
-            d.className = 'suggestion-item'; 
-            d.dataset.val = word;
-            d.innerHTML = `<span>${word}</span> <span class="suggestion-count">${count}</span>`;
-            d.onclick = () => { findInput.value = word; performFind(word, true); findBox.style.display = 'none'; };
+        const sorted = Object.entries(pageWordCounts).filter(([w]) => w.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        findBox.innerHTML = '';
+        selectedSuggestionIndex = -1;
+        sorted.forEach(([w, c]) => {
+            const d = document.createElement('div'); d.className = 'suggestion-item';
+            d.innerHTML = `<span>${w}</span> <span class="suggestion-count">${c}</span>`;
+            d.onclick = () => { findInput.value = w; performFind(w, true); findBox.style.display = 'none'; };
             findBox.appendChild(d);
         });
         findBox.style.display = sorted.length ? 'block' : 'none';
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target)) suggestionBox.style.display = 'none';
-        if (!findInput.contains(e.target)) findBox.style.display = 'none';
     });
 
     window.addEventListener('hashchange', () => {
