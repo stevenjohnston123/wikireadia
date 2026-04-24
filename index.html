@@ -45,8 +45,9 @@
         #suggestions { top: 100%; left: 0; right: 0; } 
         #find-suggestions { bottom: 100%; left: 0; right: 0; margin-bottom: 5px; } 
         
-        .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; text-align: left; }
+        .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; text-align: left; display: flex; justify-content: space-between; align-items: center; }
         .suggestion-item.selected { background-color: #e3f2fd; }
+        .suggestion-count { font-size: 0.75rem; color: #888; background: #f0f0f0; padding: 2px 6px; border-radius: 10px; }
 
         /* Main Content */
         #content { background: white; padding: 20px; margin: calc(var(--header-height) + 20px) 15px calc(var(--footer-height) + 40px) 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
@@ -58,7 +59,7 @@
         mark.find-match { background-color: #ffeb3b; color: black; border-radius: 2px; }
         mark.find-match.active { background-color: var(--active-match); color: white; }
 
-        /* TOC Styling - Highly Specific to avoid being lost */
+        /* TOC Styling */
         .toc, #toc, .mw-toc { background: #f8f9fa; border: 1px solid #a2a9b1; padding: 12px; font-size: 0.95rem; border-radius: 8px; margin: 20px 0; display: block !important; width: fit-content; max-width: 100%; box-sizing: border-box; }
         .toc h2, .toc-title { font-size: 1.1rem; margin: 0 0 10px 0; border: none; font-weight: bold; }
         .toc ul { list-style: none; padding-left: 1.5em; margin: 0; }
@@ -67,6 +68,13 @@
         .toc a:hover { text-decoration: underline; }
         .tocnumber { color: #555; margin-right: 5px; font-size: 0.8rem; }
         
+        /* Math Styling */
+        .mwe-math-element { overflow-x: auto; max-width: 100%; }
+        /* Inline math stays inline */
+        .math-inline { display: inline-flex; align-items: center; vertical-align: middle; margin: 0 2px; }
+        /* Block/Display math logic centered */
+        .math-block { display: flex; justify-content: center; margin: 1.5rem 0; padding: 15px; background: rgba(0,0,0,0.03); border-radius: 8px; clear: both; }
+
         .wiki-img-wrapper { max-width: 400px;  margin: 20px auto; text-align: center; }
         img { max-width: 100%; height: auto; border-radius: 4px; }
         
@@ -126,7 +134,12 @@
 
     let findMatches = [];
     let currentFindIndex = -1;
-    let pageWords = [];
+    let pageWordCounts = {}; // Key: word, Value: frequency
+
+    // Helper to escape regex special characters
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
 
     function populateVoices() {
         const voiceSelect = document.getElementById('voice-select');
@@ -227,10 +240,12 @@
         stopSpeech();
 
         try {
-            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle&redirects=1`;
+            const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle|images|headhtml&redirects=1`;
             const response = await fetch(url);
             const data = await response.json();
             
+            if (data.error) throw new Error(data.error.info);
+
             const parser = new DOMParser();
             const doc = parser.parseFromString(data.parse.text['*'], 'text/html');
             const container = doc.querySelector('.mw-parser-output') || doc.body;
@@ -242,11 +257,21 @@
             
             contentDiv.querySelectorAll('a').forEach(link => {
                 const href = link.getAttribute('href');
-                if (href && href.startsWith('/wiki/') && !href.includes(':')) {
-                    link.onclick = (e) => {
-                        e.preventDefault();
-                        window.location.hash = `!${href.replace('/wiki/', '')}`;
-                    };
+                if (href && href.startsWith('/wiki/')) {
+                    // Refined Wiki Title Extraction: Only strip the prefix, keep characters like colons
+                    const wikiTitle = href.substring(6); 
+                    
+                    // Filter out non-article namespaces (e.g., Help:, File:, etc.)
+                    const isNamespace = /^(File|Help|Category|Wikipedia|Talk|Portal|Special|Template):/i.test(wikiTitle);
+                    
+                    if (!isNamespace) {
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            // Decode to normalized form, then encode for the hash
+                            const normalizedTitle = decodeURIComponent(wikiTitle).replace(/_/g, ' ');
+                            window.location.hash = `!${encodeURIComponent(normalizedTitle)}`;
+                        };
+                    }
                 } else if (href && href.startsWith('#')) {
                     link.onclick = (e) => {
                         e.preventDefault();
@@ -264,26 +289,36 @@
             
         } catch (err) { 
             console.error(err);
-            contentDiv.innerHTML = "<h2>Article not found.</h2>"; 
+            contentDiv.innerHTML = `<h2>Article not found or error occurred: ${err.message}</h2>`; 
         }
     }
 
     function cleanWikiHtml(container) {
+        // Handle math elements first to preserve their context
         container.querySelectorAll('.mwe-math-element').forEach(mathEl => {
             const imgs = mathEl.querySelectorAll('img');
             imgs.forEach(img => {
                 let src = img.getAttribute('src');
                 if (src && src.startsWith('//')) img.setAttribute('src', 'https:' + src);
             });
+
+            const style = mathEl.getAttribute('style') || "";
+            const isDisplayBlock = style.includes('display: block') || 
+                                 mathEl.closest('dl, center, .mwe-math-fallback-image-display') ||
+                                 mathEl.classList.contains('mwe-math-fallback-image-display');
+
+            if (isDisplayBlock) {
+                mathEl.classList.add('math-block');
+                const parentDl = mathEl.closest('dl');
+                if (parentDl) parentDl.classList.add('readable');
+            } else {
+                mathEl.classList.add('math-inline');
+            }
         });
 
-        // Whitelist .toc AND its components to prevent removal
         const selectorsToRemove = '.mw-editsection, .infobox, .navbox, .sidebar, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .hatnote';
         container.querySelectorAll(selectorsToRemove).forEach(el => {
-            // DO NOT REMOVE if it is part of a TOC
-            if (el.classList.contains('toc') || el.id === 'toc' || el.closest('.toc') || el.closest('#toc')) {
-                return; 
-            }
+            if (el.classList.contains('toc') || el.id === 'toc' || el.closest('.toc') || el.closest('#toc')) return; 
             el.remove();
         });
 
@@ -313,30 +348,32 @@
             if (src && src.startsWith('//')) img.src = 'https:' + src;
         });
 
-        // Ensure everything relevant is marked as readable
-        container.querySelectorAll('h1, h2, h3, h4, h5, p, ul, ol, .toc, #toc').forEach(el => {
+        // Mark readable elements
+        container.querySelectorAll('h1, h2, h3, h4, h5, p, ul, ol, dl, .toc, #toc, .mwe-math-element').forEach(el => {
             const isRef = el.closest('.reflist');
-            // If it's the TOC or a child of it, mark as readable but handle differently if needed
-            if (el.innerText.trim().length > 1 && !isRef) {
-                el.classList.add('readable');
-            }
+            if (el.innerText.trim().length > 1 && !isRef) el.classList.add('readable');
         });
     }
 
     function indexPageWords() {
         const content = document.getElementById('content');
-        const words = new Set();
+        pageWordCounts = {};
         
-        // Strategy 1: Index whole terms from links (e.g. "North America")
+        const addCount = (text) => {
+            if (!text) return;
+            const t = text.trim();
+            if (t.length < 3) return;
+            pageWordCounts[t] = (pageWordCounts[t] || 0) + 1;
+        };
+
         content.querySelectorAll('a').forEach(link => {
-            const text = link.innerText.trim();
-            // Ignore very short strings or strings with newlines (block links)
-            if (text.length > 3 && !text.includes('\n')) {
-                words.add(text);
+            const href = link.getAttribute('href') || '';
+            const isWikiLink = href.startsWith('/wiki/') || href.startsWith('https://en.wikipedia.org/wiki/');
+            if (isWikiLink && !link.innerText.includes('\n')) {
+                addCount(link.innerText);
             }
         });
 
-        // Strategy 2: Individual words from text nodes
         const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
         let node;
         while(node = walker.nextNode()){
@@ -345,19 +382,15 @@
             
             const raw = node.nodeValue.split(/[^a-zA-ZÀ-ÿ0-9]/);
             raw.forEach(w => { 
-                if (w.length > 3) words.add(w); 
+                if (w.length > 3) addCount(w); 
             });
         }
-        pageWords = Array.from(words).sort((a, b) => a.localeCompare(b));
     }
 
     function jumpToTOC() {
         const toc = document.querySelector('.toc, #toc, .mw-toc');
-        if (toc) {
-            toc.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-            document.querySelector('h1')?.scrollIntoView({ behavior: 'smooth' });
-        }
+        if (toc) toc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        else document.querySelector('h1')?.scrollIntoView({ behavior: 'smooth' });
     }
 
     function clearFind() {
@@ -374,19 +407,19 @@
 
     function performFind(query, scroll = false) {
         clearFind();
-        if (!query || query.length < 2) { return; }
+        if (!query || query.length < 2) return;
         
         const content = document.getElementById('content');
         const textNodes = [];
         const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
         let node;
         while(node = walker.nextNode()){
-            if (!/(style|script|mark|img|svg|input)/i.test(node.parentElement.tagName)) {
-                textNodes.push(node);
-            }
+            if (!/(style|script|mark|img|svg|input)/i.test(node.parentElement.tagName)) textNodes.push(node);
         }
 
-        const regex = new RegExp(`(${query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
+        // Properly escape special characters in the query for regex
+        const escapedQuery = escapeRegExp(query);
+        const regex = new RegExp(`(${escapedQuery})`, 'gi');
         
         textNodes.forEach(textNode => {
             const val = textNode.nodeValue;
@@ -400,43 +433,30 @@
         });
         
         findMatches = Array.from(content.querySelectorAll('mark.find-match'));
-        if (findMatches.length > 0 && scroll) {
-            cycleFind(1);
-        }
+        if (findMatches.length > 0 && scroll) cycleFind(1);
     }
 
     function cycleFind(direction) {
         if (findMatches.length === 0) return;
-        if (currentFindIndex >= 0 && findMatches[currentFindIndex]) {
-            findMatches[currentFindIndex].classList.remove('active');
-        }
+        if (currentFindIndex >= 0 && findMatches[currentFindIndex]) findMatches[currentFindIndex].classList.remove('active');
         currentFindIndex = (currentFindIndex + direction + findMatches.length) % findMatches.length;
         const active = findMatches[currentFindIndex];
         active.classList.add('active');
         active.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // Search Listeners
+    // Header Search
     const searchInput = document.getElementById('search-input');
     const suggestionBox = document.getElementById('suggestions');
 
     searchInput.addEventListener('keydown', (e) => {
         const items = suggestionBox.querySelectorAll('.suggestion-item');
-        if (e.key === 'ArrowDown') {
+        if (e.key === 'ArrowDown') { e.preventDefault(); selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length; updateSuggestionHighlight(suggestionBox); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length; updateSuggestionHighlight(suggestionBox); }
+        else if (e.key === 'Enter') {
             e.preventDefault();
-            selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
-            updateSuggestionHighlight(suggestionBox);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
-            updateSuggestionHighlight(suggestionBox);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            const val = selectedSuggestionIndex >= 0 ? items[selectedSuggestionIndex].textContent : searchInput.value.trim();
-            if (val) {
-                searchInput.value = val;
-                window.location.hash = `!${encodeURIComponent(val)}`;
-            }
+            const val = selectedSuggestionIndex >= 0 ? items[selectedSuggestionIndex].dataset.val : searchInput.value.trim();
+            if (val) { searchInput.value = val; window.location.hash = `!${encodeURIComponent(val)}`; }
             suggestionBox.style.display = 'none';
         }
     });
@@ -452,63 +472,58 @@
             suggestionBox.innerHTML = '';
             selectedSuggestionIndex = -1;
             data[1].forEach(item => {
-                const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = item;
-                d.onclick = () => { 
-                    searchInput.value = item;
-                    window.location.hash = `!${encodeURIComponent(item)}`; 
-                    suggestionBox.style.display='none'; 
-                };
+                const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = item; d.dataset.val = item;
+                d.onclick = () => { searchInput.value = item; window.location.hash = `!${encodeURIComponent(item)}`; suggestionBox.style.display='none'; };
                 suggestionBox.appendChild(d);
             });
             suggestionBox.style.display = data[1].length ? 'block' : 'none';
         }, 300);
     });
 
-    // Find In Page Listeners
+    // Footer Find In Page
     const findInput = document.getElementById('find-input');
     const findBox = document.getElementById('find-suggestions');
 
     findInput.addEventListener('keydown', (e) => {
         const items = findBox.querySelectorAll('.suggestion-item');
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
-            updateSuggestionHighlight(findBox);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
-            updateSuggestionHighlight(findBox);
-        } else if (e.key === 'Enter') {
+        if (e.key === 'ArrowDown') { e.preventDefault(); selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length; updateSuggestionHighlight(findBox); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length; updateSuggestionHighlight(findBox); }
+        else if (e.key === 'Enter') {
             e.preventDefault();
             if (selectedSuggestionIndex >= 0) {
-                const val = items[selectedSuggestionIndex].textContent;
+                const val = items[selectedSuggestionIndex].dataset.val;
                 findInput.value = val;
                 performFind(val, true);
                 findBox.style.display = 'none';
                 selectedSuggestionIndex = -1;
-            } else if (findMatches.length > 0) {
-                cycleFind(1);
-            } else if (findInput.value.length >= 2) {
-                performFind(findInput.value, true);
-            }
+            } else if (findMatches.length > 0) cycleFind(1);
+            else if (findInput.value.length >= 2) performFind(findInput.value, true);
         }
     });
 
     findInput.addEventListener('input', (e) => {
-        const q = e.target.value.toLowerCase();
+        const q = e.target.value;
+        const qLower = q.toLowerCase();
         document.getElementById('clear-find').style.display = q.length > 0 ? 'block' : 'none';
         findBox.innerHTML = '';
         selectedSuggestionIndex = -1;
         performFind(q, false);
         if (q.length < 1) { findBox.style.display = 'none'; return; }
 
-        const filteredMatches = pageWords.filter(w => w.toLowerCase().includes(q)).slice(0, 10);
-        filteredMatches.forEach(m => {
-            const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = m;
-            d.onclick = () => { findInput.value = m; performFind(m, true); findBox.style.display = 'none'; };
+        const sorted = Object.entries(pageWordCounts)
+            .filter(([word]) => word.toLowerCase().includes(qLower))
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 15);
+
+        sorted.forEach(([word, count]) => {
+            const d = document.createElement('div'); 
+            d.className = 'suggestion-item'; 
+            d.dataset.val = word;
+            d.innerHTML = `<span>${word}</span> <span class="suggestion-count">${count}</span>`;
+            d.onclick = () => { findInput.value = word; performFind(word, true); findBox.style.display = 'none'; };
             findBox.appendChild(d);
         });
-        findBox.style.display = filteredMatches.length ? 'block' : 'none';
+        findBox.style.display = sorted.length ? 'block' : 'none';
     });
 
     document.addEventListener('click', (e) => {
