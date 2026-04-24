@@ -11,12 +11,15 @@
             --danger: #dc3545;
             --bg: #f4f7f6; 
             --highlight: #fff9c4; 
+            --active-match: #ff9800;
             --header-height: 130px; 
+            --footer-height: 70px;
         }
         
         html, body { margin: 0; padding: 0; background: var(--bg); -webkit-text-size-adjust: 100%; overflow-x: hidden; position: relative; }
         body { font-family: sans-serif, system-ui, -apple-system; line-height: 1.5; max-width: 1000px; margin: 0 auto; color: black; }
         
+        /* Header styles */
         .header-anchor { position: fixed; top: 0; left: 0; right: 0; background: var(--bg); padding: 10px 15px; z-index: 9999; border-bottom: 1px solid rgba(0,0,0,0.1); }
         .controls-wrapper { max-width: 800px; margin: 0 auto; }
         .controls { background: white; padding: 10px; border-radius: 12px; border: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -24,36 +27,54 @@
         .row { display: flex; gap: 8px; align-items: center; }
         .search-container { flex-grow: 1; position: relative; display: flex; align-items: center; }
         
-        /* Updated Search Box with X Button */
         input { width: 100%; padding: 10px 35px 10px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-        #clear-search { 
+        .clear-btn { 
             position: absolute; right: 10px; cursor: pointer; color: #999; font-weight: bold; 
             font-size: 1.2rem; user-select: none; z-index: 10;
         }
 
-        #voice-select { width: auto; max-width: 100px; padding: 8px; border: 1px solid #eee; font-size: 0.8rem; border-radius: 8px; background: #fafafa; }
+        #voice-select { width: auto; max-width:80px; padding: 8px; border: 1px solid #eee; font-size: 0.8rem; border-radius: 8px; background: #fafafa; }
         
         .media-btns { display: flex; width: 100%; gap: 2px; border-radius: 8px; overflow: hidden; }
         .icon-btn { flex: 1; height: 50px; display: flex; align-items: center; justify-content: center; border: none; background: #e0e0e0; cursor: pointer; font-size: 1.2rem; transition: background 0.2s; }
         .icon-btn.play-toggle { background: var(--success); color: white; }
         .icon-btn.play-toggle.playing { background: var(--danger); }
 
-        #suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; display: none; z-index: 10001; border-radius: 0 0 8px 8px; }
-        .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
+        /* Suggestions UI */
+        .suggestions-box { position: absolute; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; display: none; z-index: 10001; border-radius: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); }
+        #suggestions { top: 100%; left: 0; right: 0; } 
+        #find-suggestions { bottom: 100%; left: 0; right: 0; margin-bottom: 5px; } 
+        
+        .suggestion-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; text-align: left; }
+        .suggestion-item.selected { background-color: #e3f2fd; }
 
-        #content { background: white; padding: 20px; margin: calc(var(--header-height) + 20px) 15px 100px 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
+        /* Main Content */
+        #content { background: white; padding: 20px; margin: calc(var(--header-height) + 20px) 15px calc(var(--footer-height) + 40px) 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 100vh; }
 
         .readable { scroll-margin-top: calc(var(--header-height) + 40px); border-radius: 4px; padding: 2px 4px; display: block; background: white; }
         .reading-highlight { background-color: var(--highlight) !important; box-shadow: 0 0 0 2px var(--highlight); }
         
-        /* Table of Contents Styles */
-        .toc { background: #f8f9fa; border: 1px solid #a2a9b1; padding: 10px; font-size: 0.9rem; border-radius: 8px; margin: 15px 0; display: block; width: fit-content; max-width: 100%; box-sizing: border-box; }
-        .toc h2 { font-size: 1rem; margin: 0 0 5px 0; border: none; }
-        .toc ul { list-style: none; padding-left: 1.2em; margin: 0; }
-        .toc a { text-decoration: none; color: #0645ad; }
+        /* Find in Page Highlighting */
+        mark.find-match { background-color: #ffeb3b; color: black; border-radius: 2px; }
+        mark.find-match.active { background-color: var(--active-match); color: white; }
+
+        /* TOC Styling - Highly Specific to avoid being lost */
+        .toc, #toc, .mw-toc { background: #f8f9fa; border: 1px solid #a2a9b1; padding: 12px; font-size: 0.95rem; border-radius: 8px; margin: 20px 0; display: block !important; width: fit-content; max-width: 100%; box-sizing: border-box; }
+        .toc h2, .toc-title { font-size: 1.1rem; margin: 0 0 10px 0; border: none; font-weight: bold; }
+        .toc ul { list-style: none; padding-left: 1.5em; margin: 0; }
+        .toc li { margin: 4px 0; }
+        .toc a { text-decoration: none; color: #0645ad; display: inline-block; }
+        .toc a:hover { text-decoration: underline; }
+        .tocnumber { color: #555; margin-right: 5px; font-size: 0.8rem; }
         
         .wiki-img-wrapper { max-width: 400px;  margin: 20px auto; text-align: center; }
-        img { width: 100%; height: auto; border-radius: 4px; }
+        img { max-width: 100%; height: auto; border-radius: 4px; }
+        
+        /* Footer Bar Styles */
+        .footer-anchor { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 10px 15px; z-index: 9999; border-top: 1px solid rgba(0,0,0,0.1); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .footer-controls { display: flex; align-items: center; gap: 8px; max-width: 800px; margin: 0 auto; height: 50px; }
+        .footer-btn { width: 45px; height: 45px; border-radius: 8px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .footer-btn:active { background: #e9ecef; }
     </style>
 </head>
 <body>
@@ -64,8 +85,8 @@
             <div class="row">
                 <div class="search-container">
                     <input type="text" id="search-input" placeholder="Search Wikipedia..." autocomplete="off">
-                    <span id="clear-search" onclick="clearSearch()">&times;</span>
-                    <div id="suggestions"></div>
+                    <span id="clear-search" class="clear-btn" style="display:none" onclick="clearSearch('search-input', 'suggestions')">&times;</span>
+                    <div id="suggestions" class="suggestions-box"></div>
                 </div>
                 <select id="voice-select"></select>
             </div>
@@ -83,31 +104,49 @@
     <p class="readable">Search a topic above to begin.</p>
 </article>
 
+<div class="footer-anchor">
+    <div class="footer-controls">
+        <button class="footer-btn" onclick="jumpToTOC()" title="Table of Contents">📋</button>
+        <div class="search-container">
+            <div id="find-suggestions" class="suggestions-box"></div>
+            <input type="text" id="find-input" placeholder="Find in page..." autocomplete="off">
+            <span id="clear-find" class="clear-btn" style="display:none" onclick="clearSearch('find-input', 'find-suggestions')">&times;</span>
+        </div>
+        <button class="footer-btn" onclick="cycleFind(-1)" title="Previous match">↑</button>
+        <button class="footer-btn" onclick="cycleFind(1)" title="Next match">↓</button>
+    </div>
+</div>
+
 <script>
     let isReading = false;
     let currentElementIndex = 0;
     let readableElements = [];
     let debounceTimer;
+    let selectedSuggestionIndex = -1;
+
+    let findMatches = [];
+    let currentFindIndex = -1;
+    let pageWords = [];
 
     function populateVoices() {
         const voiceSelect = document.getElementById('voice-select');
-        const englishVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+        const voices = window.speechSynthesis.getVoices();
+        const englishVoices = voices.filter(v => v.lang.startsWith('en'));
         voiceSelect.innerHTML = '';
-        console.log(englishVoices)
         englishVoices.forEach((voice, i) => {
             const opt = document.createElement('option');
             opt.value = i;
             opt.textContent = voice.name;
-            if (voice.name.includes("Daniel")) opt.selected = true;
+            if (voice.name.includes("Daniel") || voice.name.includes("Google US English")) opt.selected = true;
             voiceSelect.appendChild(opt);
         });
     }
 
-    window.speechSynthesis.onvoiceschanged = populateVoices;
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoices;
+    }
     populateVoices();
 
-
-    // SPEECH CONTROLS
     function toggleSpeech() { isReading ? stopSpeech() : startSpeech(); }
     function stopSpeech() { isReading = false; window.speechSynthesis.cancel(); updateBtn(false); }
 
@@ -121,7 +160,7 @@
 
     function refreshReadableList() {
         readableElements = Array.from(document.querySelectorAll('.readable'))
-            .filter(el => el.innerText.trim().length > 2);
+            .filter(el => el.innerText.trim().length > 0);
     }
 
     function navSegment(direction) {
@@ -133,15 +172,15 @@
 
     function speakCurrent() {
         if (!isReading || currentElementIndex >= readableElements.length) { stopSpeech(); return; }
-        
-        navigator.wakeLock.request('screen');
-
         const el = readableElements[currentElementIndex];
         document.querySelectorAll('.reading-highlight').forEach(e => e.classList.remove('reading-highlight'));
         el.classList.add('reading-highlight');
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        const utterance = new SpeechSynthesisUtterance(el.innerText);
+        let speechText = el.innerText;
+        speechText = speechText.replace(/\[[a-zA-Z0-9]+\]/g, "");
+
+        const utterance = new SpeechSynthesisUtterance(speechText);
         const selectedIndex = document.getElementById('voice-select').value;
         const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
         if (voices[selectedIndex]) utterance.voice = voices[selectedIndex];
@@ -156,25 +195,35 @@
         btn.classList.toggle("playing", playing);
     }
 
-    // SEARCH & DATA FETCHING
-    function clearSearch() {
-        const input = document.getElementById('search-input');
+    function clearSearch(inputId, boxId) {
+        const input = document.getElementById(inputId);
         input.value = '';
-        //document.getElementById('clear-search').style.display = 'none';
-        document.getElementById('suggestions').style.display = 'none';
+        document.getElementById(boxId).style.display = 'none';
+        const clearBtnId = inputId === 'search-input' ? 'clear-search' : 'clear-find';
+        document.getElementById(clearBtnId).style.display = 'none';
+        selectedSuggestionIndex = -1;
         input.focus();
+        if (inputId === 'find-input') clearFind();
+    }
+
+    function updateSuggestionHighlight(box) {
+        const items = box.querySelectorAll('.suggestion-item');
+        items.forEach((item, index) => {
+            if (index === selectedSuggestionIndex) {
+                item.classList.add('selected');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('selected');
+            }
+        });
     }
 
     async function fetchWikiData(title) {
         const contentDiv = document.getElementById('content');
         contentDiv.innerHTML = "<h2>Loading Article...</h2>";
         
-        // Navigation auto-clears search
-        const input = document.getElementById('search-input');
-        input.value = '';
-        //document.getElementById('clear-search').style.display = 'none';
         document.getElementById('suggestions').style.display = 'none';
-        
+        clearFind();
         stopSpeech();
 
         try {
@@ -211,14 +260,35 @@
             window.scrollTo(0, 0);
             refreshReadableList();
             currentElementIndex = 0;
-        } catch (err) { contentDiv.innerHTML = "<h2>Article not found.</h2>"; }
+            indexPageWords();
+            
+        } catch (err) { 
+            console.error(err);
+            contentDiv.innerHTML = "<h2>Article not found.</h2>"; 
+        }
     }
 
     function cleanWikiHtml(container) {
-        // Removed '.toc' from deletion list
-        container.querySelectorAll('.mw-editsection, .infobox, .navbox, .sidebar, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .mw-parser-output .reflist, .hatnote, .reference').forEach(el => el.remove());
+        container.querySelectorAll('.mwe-math-element').forEach(mathEl => {
+            const imgs = mathEl.querySelectorAll('img');
+            imgs.forEach(img => {
+                let src = img.getAttribute('src');
+                if (src && src.startsWith('//')) img.setAttribute('src', 'https:' + src);
+            });
+        });
 
-        container.querySelectorAll('.thumb, figure, img').forEach(thumb => {
+        // Whitelist .toc AND its components to prevent removal
+        const selectorsToRemove = '.mw-editsection, .infobox, .navbox, .sidebar, .mw-empty-elt, .metadata, .ambox, style, script, .legend, .hatnote';
+        container.querySelectorAll(selectorsToRemove).forEach(el => {
+            // DO NOT REMOVE if it is part of a TOC
+            if (el.classList.contains('toc') || el.id === 'toc' || el.closest('.toc') || el.closest('#toc')) {
+                return; 
+            }
+            el.remove();
+        });
+
+        container.querySelectorAll('.thumb, figure').forEach(thumb => {
+            if (thumb.querySelector('.mwe-math-element')) return;
             const img = thumb.querySelector('img');
             const cap = thumb.querySelector('.thumbcaption, figcaption');
             const wrapper = document.createElement('div');
@@ -238,42 +308,212 @@
             thumb.parentNode.replaceChild(wrapper, thumb);
         });
 
-        // Tag readable elements but skip TOC content
-        container.querySelectorAll('h1, h2, h3, h4, h5, p, ul, ol').forEach(el => {
-            if (el.innerText.trim().length > 2 && !el.closest('.toc')) {
+        container.querySelectorAll('img').forEach(img => {
+            let src = img.getAttribute('src');
+            if (src && src.startsWith('//')) img.src = 'https:' + src;
+        });
+
+        // Ensure everything relevant is marked as readable
+        container.querySelectorAll('h1, h2, h3, h4, h5, p, ul, ol, .toc, #toc').forEach(el => {
+            const isRef = el.closest('.reflist');
+            // If it's the TOC or a child of it, mark as readable but handle differently if needed
+            if (el.innerText.trim().length > 1 && !isRef) {
                 el.classList.add('readable');
             }
         });
     }
 
-    // SEARCH INPUT LISTENERS
+    function indexPageWords() {
+        const content = document.getElementById('content');
+        const words = new Set();
+        
+        // Strategy 1: Index whole terms from links (e.g. "North America")
+        content.querySelectorAll('a').forEach(link => {
+            const text = link.innerText.trim();
+            // Ignore very short strings or strings with newlines (block links)
+            if (text.length > 3 && !text.includes('\n')) {
+                words.add(text);
+            }
+        });
+
+        // Strategy 2: Individual words from text nodes
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        while(node = walker.nextNode()){
+            const parent = node.parentElement;
+            if (!parent || parent.tagName === 'STYLE' || parent.tagName === 'SCRIPT' || parent.closest('.toc')) continue;
+            
+            const raw = node.nodeValue.split(/[^a-zA-ZÀ-ÿ0-9]/);
+            raw.forEach(w => { 
+                if (w.length > 3) words.add(w); 
+            });
+        }
+        pageWords = Array.from(words).sort((a, b) => a.localeCompare(b));
+    }
+
+    function jumpToTOC() {
+        const toc = document.querySelector('.toc, #toc, .mw-toc');
+        if (toc) {
+            toc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            document.querySelector('h1')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    function clearFind() {
+        const content = document.getElementById('content');
+        const marks = content.querySelectorAll('mark.find-match');
+        marks.forEach(m => {
+            const textNode = document.createTextNode(m.textContent);
+            m.parentNode.replaceChild(textNode, m);
+        });
+        content.normalize();
+        findMatches = [];
+        currentFindIndex = -1;
+    }
+
+    function performFind(query, scroll = false) {
+        clearFind();
+        if (!query || query.length < 2) { return; }
+        
+        const content = document.getElementById('content');
+        const textNodes = [];
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        while(node = walker.nextNode()){
+            if (!/(style|script|mark|img|svg|input)/i.test(node.parentElement.tagName)) {
+                textNodes.push(node);
+            }
+        }
+
+        const regex = new RegExp(`(${query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi');
+        
+        textNodes.forEach(textNode => {
+            const val = textNode.nodeValue;
+            if (regex.test(val)) {
+                const span = document.createElement('span');
+                span.innerHTML = val.replace(regex, '<mark class="find-match">$1</mark>');
+                textNode.parentNode.replaceChild(span, textNode);
+                while (span.firstChild) span.parentNode.insertBefore(span.firstChild, span);
+                span.parentNode.removeChild(span);
+            }
+        });
+        
+        findMatches = Array.from(content.querySelectorAll('mark.find-match'));
+        if (findMatches.length > 0 && scroll) {
+            cycleFind(1);
+        }
+    }
+
+    function cycleFind(direction) {
+        if (findMatches.length === 0) return;
+        if (currentFindIndex >= 0 && findMatches[currentFindIndex]) {
+            findMatches[currentFindIndex].classList.remove('active');
+        }
+        currentFindIndex = (currentFindIndex + direction + findMatches.length) % findMatches.length;
+        const active = findMatches[currentFindIndex];
+        active.classList.add('active');
+        active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Search Listeners
     const searchInput = document.getElementById('search-input');
-    const clearBtn = document.getElementById('clear-search');
+    const suggestionBox = document.getElementById('suggestions');
 
     searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            window.location.hash = `!${encodeURIComponent(searchInput.value.trim())}`;
+        const items = suggestionBox.querySelectorAll('.suggestion-item');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+            updateSuggestionHighlight(suggestionBox);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
+            updateSuggestionHighlight(suggestionBox);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = selectedSuggestionIndex >= 0 ? items[selectedSuggestionIndex].textContent : searchInput.value.trim();
+            if (val) {
+                searchInput.value = val;
+                window.location.hash = `!${encodeURIComponent(val)}`;
+            }
+            suggestionBox.style.display = 'none';
         }
     });
 
     searchInput.addEventListener('input', (e) => {
         clearTimeout(debounceTimer);
         const q = e.target.value;
-        clearBtn.style.display = q.length > 0 ? 'block' : 'none';
-        
-        if (q.length < 2) { document.getElementById('suggestions').style.display = 'none'; return; }
+        document.getElementById('clear-search').style.display = q.length > 0 ? 'block' : 'none';
+        if (q.length < 2) { suggestionBox.style.display = 'none'; return; }
         debounceTimer = setTimeout(async () => {
             const res = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&format=json&origin=*&search=${encodeURIComponent(q)}`);
             const data = await res.json();
-            const suggestionBox = document.getElementById('suggestions');
             suggestionBox.innerHTML = '';
+            selectedSuggestionIndex = -1;
             data[1].forEach(item => {
                 const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = item;
-                d.onclick = () => { window.location.hash = `!${encodeURIComponent(item)}`; };
+                d.onclick = () => { 
+                    searchInput.value = item;
+                    window.location.hash = `!${encodeURIComponent(item)}`; 
+                    suggestionBox.style.display='none'; 
+                };
                 suggestionBox.appendChild(d);
             });
             suggestionBox.style.display = data[1].length ? 'block' : 'none';
         }, 300);
+    });
+
+    // Find In Page Listeners
+    const findInput = document.getElementById('find-input');
+    const findBox = document.getElementById('find-suggestions');
+
+    findInput.addEventListener('keydown', (e) => {
+        const items = findBox.querySelectorAll('.suggestion-item');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+            updateSuggestionHighlight(findBox);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
+            updateSuggestionHighlight(findBox);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedSuggestionIndex >= 0) {
+                const val = items[selectedSuggestionIndex].textContent;
+                findInput.value = val;
+                performFind(val, true);
+                findBox.style.display = 'none';
+                selectedSuggestionIndex = -1;
+            } else if (findMatches.length > 0) {
+                cycleFind(1);
+            } else if (findInput.value.length >= 2) {
+                performFind(findInput.value, true);
+            }
+        }
+    });
+
+    findInput.addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase();
+        document.getElementById('clear-find').style.display = q.length > 0 ? 'block' : 'none';
+        findBox.innerHTML = '';
+        selectedSuggestionIndex = -1;
+        performFind(q, false);
+        if (q.length < 1) { findBox.style.display = 'none'; return; }
+
+        const filteredMatches = pageWords.filter(w => w.toLowerCase().includes(q)).slice(0, 10);
+        filteredMatches.forEach(m => {
+            const d = document.createElement('div'); d.className = 'suggestion-item'; d.textContent = m;
+            d.onclick = () => { findInput.value = m; performFind(m, true); findBox.style.display = 'none'; };
+            findBox.appendChild(d);
+        });
+        findBox.style.display = filteredMatches.length ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target)) suggestionBox.style.display = 'none';
+        if (!findInput.contains(e.target)) findBox.style.display = 'none';
     });
 
     window.addEventListener('hashchange', () => {
@@ -283,6 +523,5 @@
 
     if(window.location.hash) fetchWikiData(decodeURIComponent(window.location.hash.substring(2)));
 </script>
-
 </body>
 </html>
