@@ -194,6 +194,7 @@
 
     function speakCurrent() {
         if (!isReading || currentElementIndex >= readableElements.length) { stopSpeech(); return; }
+        navigator.wakeLock.request('screen');
         const el = readableElements[currentElementIndex];
         document.querySelectorAll('.reading-highlight').forEach(e => e.classList.remove('reading-highlight'));
         el.classList.add('reading-highlight');
