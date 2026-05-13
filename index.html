@@ -181,7 +181,7 @@
             .filter(el => {
                 const text = el.innerText.trim();
                 const isHidden = window.getComputedStyle(el).display === 'none';
-                return text.length > 0 && !isHidden && !el.closest('.custom-toc');
+                return text.length > 0 && !isHidden && !el.closest('.custom-toc') && !el.closest('.references');
             });
     }
 
@@ -194,11 +194,13 @@
 
     function speakCurrent() {
         if (!isReading || currentElementIndex >= readableElements.length) { stopSpeech(); return; }
+
         navigator.wakeLock.request('screen');
+        
         const el = readableElements[currentElementIndex];
         document.querySelectorAll('.reading-highlight').forEach(e => e.classList.remove('reading-highlight'));
         el.classList.add('reading-highlight');
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         let speechText = el.innerText.replace(/\[[a-zA-Z0-9]+\]/g, "");
         const utterance = new SpeechSynthesisUtterance(speechText);
