@@ -179,7 +179,7 @@
     function refreshReadableList() {
         readableElements = Array.from(document.querySelectorAll('.readable'))
             .filter(el => {
-                const text = el.innerText.trim();
+                const text = el?.innerText?.trim();
                 const isHidden = window.getComputedStyle(el).display === 'none';
                 return text.length > 0 && !isHidden && !el.closest('.custom-toc') && !el.closest('.references');
             });
@@ -383,7 +383,7 @@
         });
 
         container.querySelectorAll('h1, h2, h3, h4, h5, p, ul, ol, dl, .mwe-math-element').forEach(el => {
-            if (el.innerText.trim().length > 1) {
+            if (el?.innerText?.trim().length > 1) {
                 el.classList.add('readable');
             }
         });
